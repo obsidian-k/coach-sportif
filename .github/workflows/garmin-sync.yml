@@ -1,0 +1,54 @@
+name: Garmin Sync
+
+on:
+  schedule:
+    # Minutes non rondes : les créneaux à l'heure pile sont saturés chez
+    # GitHub et souvent retardés de 1-3 h. Deux passages/jour = filet de
+    # sécurité si l'un est retardé ou droppé (les données sont cumulatives).
+    - cron: '23 4 * * *'   # ~06h23 France
+    - cron: '17 11 * * *'  # ~13h17 France (rattrapage)
+  workflow_dispatch:
+    inputs:
+      days:
+        description: 'Nombre de jours à récupérer (activités)'
+        required: false
+        default: '60'
+      sleep_days:
+        description: 'Nombre de nuits de sommeil (grande valeur = backfill historique)'
+        required: false
+        default: '4000'
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v5
+
+      - name: Setup Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install garminconnect python-dotenv
+
+      - name: Run sync
+        env:
+          GARMIN_EMAIL: ${{ secrets.GARMIN_EMAIL }}
+          GARMIN_PASSWORD: ${{ secrets.GARMIN_PASSWORD }}
+        run: python garmin_to_sessions.py --days ${{ github.event.inputs.days || 60 }} --sleep-days ${{ github.event.inputs.sleep_days || 14 }}
+
+      - name: Commit if changed
+        if: always()
+        run: |
+          git config user.name "Garmin Bot"
+          git config user.email "bot@github.com"
+          git add data/sessions.json data/sleep.json 2>/dev/null || true
+          git diff --staged --quiet || git commit -m "sync: Garmin activities $(date +%Y-%m-%d)"
+          git pull --rebase origin main
+          git push
