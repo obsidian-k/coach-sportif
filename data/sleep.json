@@ -1,5 +1,65 @@
 [
   {
+    "date": "2026-07-11",
+    "duration_h": 6.4,
+    "rem_h": 1.08,
+    "deep_h": 1.72,
+    "light_h": 3.6,
+    "score": 73,
+    "resting_hr": 54,
+    "hrv": 39
+  },
+  {
+    "date": "2026-07-10",
+    "duration_h": 7.97,
+    "rem_h": 1.83,
+    "deep_h": 2.32,
+    "light_h": 3.82,
+    "score": 97,
+    "resting_hr": 51,
+    "hrv": 49
+  },
+  {
+    "date": "2026-07-09",
+    "duration_h": 7.47,
+    "rem_h": 1.48,
+    "deep_h": 2.0,
+    "light_h": 3.98,
+    "score": 89,
+    "resting_hr": 48,
+    "hrv": 46
+  },
+  {
+    "date": "2026-07-08",
+    "duration_h": 7.62,
+    "rem_h": 1.68,
+    "deep_h": 1.93,
+    "light_h": 4.0,
+    "score": 86,
+    "resting_hr": 50,
+    "hrv": 47
+  },
+  {
+    "date": "2026-07-07",
+    "duration_h": 7.45,
+    "rem_h": 1.02,
+    "deep_h": 1.82,
+    "light_h": 4.62,
+    "score": 52,
+    "resting_hr": 53,
+    "hrv": 39
+  },
+  {
+    "date": "2026-07-06",
+    "duration_h": 7.3,
+    "rem_h": 1.23,
+    "deep_h": 1.63,
+    "light_h": 4.45,
+    "score": 83,
+    "resting_hr": 51,
+    "hrv": 47
+  },
+  {
     "date": "2026-07-05",
     "duration_h": 5.3,
     "rem_h": 0.87,
