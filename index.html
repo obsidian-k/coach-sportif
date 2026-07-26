@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style.css?v=4">
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js"></script>
 </head>
@@ -52,9 +52,9 @@
           <svg width="16" height="16" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6.5" stroke="currentColor" stroke-width="1.5" fill="none"/><path d="M8 5v3l2 2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
           Séances
         </a></li>
-        <li><a href="#planning" class="nav-link" data-view="planning">
-          <svg width="16" height="16" viewBox="0 0 16 16"><rect x="1.5" y="3" width="13" height="11" rx="1.5" stroke="currentColor" stroke-width="1.5" fill="none"/><path d="M5 1.5v3M11 1.5v3M1.5 7h13" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
-          Planning
+        <li><a href="#coach" class="nav-link" data-view="coach">
+          <svg width="16" height="16" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6.5" stroke="currentColor" stroke-width="1.5" fill="none"/><circle cx="8" cy="8" r="2.5" stroke="currentColor" stroke-width="1.5" fill="none"/><path d="M8 1.5v2M8 12.5v2M1.5 8h2M12.5 8h2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+          Coach
         </a></li>
         <li><a href="#stats" class="nav-link" data-view="stats">
           <svg width="16" height="16" viewBox="0 0 16 16"><path d="M2 13 L5 8 L8 10 L11 5 L14 7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>
@@ -157,6 +157,8 @@
 
   </div><!-- /#app -->
 
-  <script src="app.js?v=7"></script>
+  <script src="coach-engine.js?v=4"></script>
+  <script src="app.js?v=9"></script>
+  <script src="coach-view.js?v=4"></script>
 </body>
 </html>

@@ -1,0 +1,14 @@
+SAUVEGARDE — Coach Sportif
+==========================
+
+Contenu :
+- Code de l'appli : app.js, coach-engine.js, coach-view.js, index.html, style.css, functions/, .github/, garmin_to_sessions.py
+- Météo : Open-Meteo (gratuit, sans clé, appelé depuis le navigateur) — aucun secret à gérer.
+- Tes données : data/sessions.json (séances), data/sleep.json (sommeil), data/settings.json (réglages)
+- Assets : Tools/ (avatar, images)
+
+POUR RESTAURER / REPARTIR :
+1. Le plus simple : le projet vit sur GitHub → git clone https://github.com/obsidian-k/coach-sportif.git
+2. Sinon : décompresse ce zip, tu as tout le code + tes données pour redéployer où tu veux.
+
+Rien d'autre n'est nécessaire (pas de .git, pas de cache, pas de secrets — les secrets vivent côté GitHub/Cloudflare).

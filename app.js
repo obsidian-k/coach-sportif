@@ -36,22 +36,6 @@ function closeMobileNav() {
 
 document.addEventListener('DOMContentLoaded', initApp);
 
-// ─── Programme 12 semaines ────────────────────────────────────────────────────
-const PROGRAM = [
-  { rameur: '15 min — cadence 22', corde: '3 rounds (30s on/off si galère)', sac: '4 rounds — jab-cross uniquement', renfo: 'R1: pompes | R2: planche | R3: squats', course: '5-6 km allure libre', cardio_mardi: '20 min vélo ou rameur — effort léger' },
-  { rameur: '15 min — cadence 22', corde: '3 rounds', sac: '4 rounds — jab-cross', renfo: 'idem S1', course: '5-6 km structurée', cardio_mardi: '25 min' },
-  { rameur: '18 min — cadence 24', corde: '4 rounds', sac: '5 rounds — jab-cross', renfo: 'idem + burpees sans pompes', course: '6 km', cardio_mardi: '25 min' },
-  { rameur: '18 min — cadence 24', corde: '5 rounds', sac: '5 rounds — jab-cross', renfo: 'idem + pompes classiques', course: '6.5 km — CHRONO 5K', cardio_mardi: '30 min' },
-  { rameur: '20 min — cadence 24', corde: '5 rounds 3 min continues', sac: '5 rounds — ajouter crochet (1-2-3)', renfo: 'idem + burpees complets', course: '7 km', cardio_mardi: '30 min — alterner vélo/rameur' },
-  { rameur: '20 min — cadence 24-26', corde: '5 rounds', sac: '6 rounds — combos 1-2-3', renfo: 'idem S5', course: '7 km — negative split', cardio_mardi: '30 min' },
-  { rameur: '22 min — cadence 26', corde: '6 rounds — varier pieds', sac: '6 rounds — combos 1-2-3-2', renfo: 'idem + squats x20', course: '7.5 km', cardio_mardi: '35 min' },
-  { rameur: '22 min + TEST 5000m', corde: '6 rounds', sac: '6 rounds — combos variés', renfo: 'idem S7', course: '8 km — CHRONO', cardio_mardi: '35 min + test 5000m rameur' },
-  { rameur: '20 min — 1 min fort / 2 min modéré', corde: '6 rounds — montées genoux', sac: '6 rounds — tête + corps', renfo: 'idem S8', course: 'Fractionné — 10 min échauff + 8×(3 min vite / 1 min marche) + 10 min retour', cardio_mardi: '35 min — alterné fort/modéré' },
-  { rameur: '20 min — alterné', corde: '7 rounds', sac: '7 rounds — tête/corps', renfo: 'idem + kettlebell (si acheté)', course: '8 km long', cardio_mardi: '35 min' },
-  { rameur: '25 min — alterné', corde: '7 rounds — croisés', sac: '7 rounds — 4-5 coups', renfo: 'idem S10', course: 'Fractionné — 10×(3 min / 1 min)', cardio_mardi: '40 min' },
-  { rameur: '25 min + RETEST 5000m', corde: '7 rounds', sac: '7 rounds — tout', renfo: 'idem S11', course: '9 km — CHRONO FINAL', cardio_mardi: '40 min + retest 5000m' }
-];
-
 // ─── Config types ─────────────────────────────────────────────────────────────
 const TYPES = {
   rameur:       { label: 'Rameur',          icon: '🚣', color: '#FC4C02' },
@@ -134,19 +118,6 @@ function addDays(dateStr, n) {
   return d.toISOString().split('T')[0];
 }
 
-// ─── Helpers planning ─────────────────────────────────────────────────────────
-function getCurrentWeek(startDate) {
-  const start = new Date(startDate); start.setHours(0,0,0,0);
-  const now = new Date(); now.setHours(0,0,0,0);
-  return Math.max(1, Math.floor((now - start) / (1000*60*60*24*7)) + 1);
-}
-function getWeekBounds(startDate, weekNum) {
-  const s = new Date(startDate); s.setHours(0,0,0,0);
-  s.setDate(s.getDate() + (weekNum - 1) * 7);
-  const e = new Date(s); e.setDate(e.getDate() + 6);
-  return { start: s.toISOString().split('T')[0], end: e.toISOString().split('T')[0] };
-}
-
 // ─── DB — localStorage ────────────────────────────────────────────────────────
 const DB = {
   SK: 'coach_sessions',
@@ -202,10 +173,10 @@ const DB = {
 
   getSettings() {
     return JSON.parse(localStorage.getItem(this.CK) || JSON.stringify({
-      program_start_date: '2026-04-06',
       user_name: 'Sébastien',
-      training_days: ['vendredi', 'dimanche'],
-      bonus_day: 'mardi',
+      coach_days: [1, 5],                 // télétravail : lundi & vendredi
+      place: 'Noyal-sur-Vilaine',
+      lat: 48.1206, lon: -1.5117,
     }));
   },
   saveSettings(data) { localStorage.setItem(this.CK, JSON.stringify(data)); },
@@ -357,63 +328,6 @@ function computeAnnualStats(sessions) {
     byYear[yr].byType[s.type] = (byYear[yr].byType[s.type] || 0) + 1;
   });
   return byYear;
-}
-
-// ─── Adaptation du programme ──────────────────────────────────────────────────
-function computeAdaptedPlan(sessions, currentWeek) {
-  if (currentWeek < 2) return null;
-  const settings = DB.getSettings();
-  const { start: prevStart, end: prevEnd } = getWeekBounds(settings.program_start_date, currentWeek - 1);
-  const prevSessions = sessions.filter(s => s.date >= prevStart && s.date <= prevEnd);
-  const plan = PROGRAM[currentWeek - 1];
-  if (!plan) return null;
-  const suggestions = [];
-
-  const coursePlan = plan.course?.match(/(\d+(?:\.\d+)?)\s*km/);
-  const courseDone = prevSessions.filter(s => ['course_ext', 'course_tapis'].includes(s.type) && s.distance_km);
-  if (coursePlan && courseDone.length > 0) {
-    const planKm = parseFloat(coursePlan[1]);
-    const doneKm = Math.max(...courseDone.map(s => s.distance_km));
-    const diff = doneKm - planKm;
-    if (diff > planKm * 0.15) {
-      suggestions.push({ type: 'course', msg: `Tu as fait ${doneKm} km sem. passée (plan: ${planKm} km) — vise ${(planKm + 0.5).toFixed(1)} km` });
-    } else if (diff < -planKm * 0.2) {
-      suggestions.push({ type: 'course', msg: `Distance courte sem. passée — reste sur ${planKm} km, pas de pression` });
-    }
-  }
-
-  const rameurPlan = plan.rameur?.match(/(\d+)\s*min/);
-  const rameurDone = prevSessions.filter(s => s.type === 'rameur' && s.duration_min);
-  if (rameurPlan && rameurDone.length > 0) {
-    const planMin = parseInt(rameurPlan[1]);
-    const doneMin = Math.max(...rameurDone.map(s => s.duration_min));
-    if (doneMin >= planMin + 5) {
-      suggestions.push({ type: 'rameur', msg: `Rameur: ${Math.round(doneMin)} min effectués — tu peux pousser à ${planMin + 3} min` });
-    }
-  }
-
-  return suggestions.length > 0 ? suggestions : null;
-}
-
-// ─── Planning (côté client) ───────────────────────────────────────────────────
-function computePlanning(sessions) {
-  const settings = DB.getSettings();
-  const currentWeek = getCurrentWeek(settings.program_start_date);
-  const totalWeeks = PROGRAM.length;
-  const isProgramDone = currentWeek > totalWeeks;
-  const displayWeek = Math.min(currentWeek, totalWeeks);
-  const weekPlan = PROGRAM[displayWeek - 1];
-  const { start, end } = getWeekBounds(settings.program_start_date, displayWeek);
-  const weekSessions = sessions.filter(s => s.date >= start && s.date <= end);
-
-  const allWeeks = PROGRAM.map((plan, i) => {
-    const w = i + 1;
-    const b = getWeekBounds(settings.program_start_date, w);
-    const wSessions = sessions.filter(s => s.date >= b.start && s.date <= b.end);
-    return { week: w, start: b.start, end: b.end, plan, sessions: wSessions, sessionCount: wSessions.length };
-  });
-
-  return { currentWeek, isProgramDone, displayWeek, weekPlan, weekStart: start, weekEnd: end, weekSessions, allWeeks };
 }
 
 // ─── CSV Parsers ──────────────────────────────────────────────────────────────
@@ -580,14 +494,13 @@ function navigate(view) {
   destroyCharts();
   const main = document.getElementById('main');
   main.innerHTML = '<div class="loader">Chargement…</div>';
-  ({ dashboard, seances, planning, stats, recup: recupView, import: importView }[view] || dashboard)(main);
+  ({ dashboard, seances, coach: coachView, stats, recup: recupView, import: importView }[view] || dashboard)(main);
 }
 window.addEventListener('hashchange', () => navigate(location.hash.slice(1) || 'dashboard'));
 
 // ─── VUE : DASHBOARD ─────────────────────────────────────────────────────────
 function dashboard(main) {
   const sessions  = DB.getSessions();
-  const plan      = computePlanning(sessions);
   const settings  = DB.getSettings();
   const todayStr  = today();
   const thisMonday = getMondayOf(todayStr);
@@ -676,10 +589,10 @@ function dashboard(main) {
     <div class="dash-grid">
       <div class="prog-card">
         <div class="card-head">
-          <span class="card-head-lbl">Programme S${plan.currentWeek}/12</span>
-          <span class="card-badge">${plan.currentWeek <= 12 ? `S${plan.currentWeek}/12` : 'Libre'}</span>
+          <span class="card-head-lbl">Prochaines séances proposées</span>
+          <a class="card-link" href="#coach">Voir le coach →</a>
         </div>
-        <div id="week-plan"></div>
+        <div id="week-plan"><div class="loader" style="padding:32px 0">Analyse de la charge et de la météo…</div></div>
       </div>
       <div class="recent-card">
         <div class="card-head">
@@ -692,7 +605,7 @@ function dashboard(main) {
   `;
 
   document.getElementById('week-compare').innerHTML = buildWeekCompare(thisWeekSess, lastWeekSess, thisMonday, thisSunday, lastMonday, lastSunday);
-  renderWeekPlan(plan, sessions);
+  renderDashCoach();
   const recentEl = document.getElementById('recent-sessions');
   sessions.slice(0,8).forEach(s => recentEl.appendChild(buildRecentRow(s)));
 }
@@ -734,65 +647,6 @@ function buildWeekCompare(thisSess, lastSess, thisStart, thisEnd, lastStart, las
       </div>
       <div class="wc-types">${lw.types.map(t=>`<span title="${typeLabel(t)}">${typeIcon(t)}</span>`).join(' ')||noSess}</div>
     </div>`;
-}
-
-function renderWeekPlan(planning, sessions) {
-  const el = document.getElementById('week-plan'); if (!el) return;
-  const plan = planning.weekPlan;
-  if (!plan) { el.innerHTML='<div class="empty-state"><p>Programme non configuré</p></div>'; return; }
-
-  const suggestions = computeAdaptedPlan(sessions, planning.currentWeek);
-  if (suggestions && suggestions.length > 0) {
-    const hint = document.createElement('div');
-    hint.className = 'adaptive-hint';
-    hint.innerHTML = `<b>Suggestions form</b>${suggestions.map(s=>`${typeIcon(s.type)} ${s.msg}`).join(' · ')}`;
-    el.appendChild(hint);
-  }
-
-  const acts = [
-    { name:'Rameur', type:'rameur', desc:plan.rameur },
-    { name:'Corde', type:'corde', desc:plan.corde },
-    { name:'Sac', type:'sac', desc:plan.sac },
-    { name:'Renfo', type:'renfo', desc:plan.renfo },
-    { name:'Course', type:'course', desc:plan.course },
-    { name:'Cardio (bonus)', type:'cardio_mardi', desc:plan.cardio_mardi },
-  ];
-  acts.forEach(act => {
-    const done = findMatchingSession(planning.weekSessions, act.type);
-    const item = document.createElement('div');
-    item.className = 'prog-item';
-    let doneHtml = '';
-    if (done) {
-      let d = formatDuration(done.duration_min);
-      if (done.distance_km) d += ` · ${done.distance_km} km`;
-      if (done.rounds) d += ` · ${done.rounds} rounds`;
-      doneHtml = `<div class="prog-done">✓ ${d}</div>`;
-      const diff = computeDiff(act.desc, done);
-      if (diff) doneHtml += `<div class="prog-diff">${diff}</div>`;
-    }
-    item.innerHTML = `<div class="prog-icon" style="color:${typeColor(act.type)}">${typeIcon(act.type)}</div><div class="prog-body"><div class="prog-name">${act.name}</div><div class="prog-desc">${act.desc}</div>${doneHtml}</div><div class="prog-check">${done?'✓':'○'}</div>`;
-    el.appendChild(item);
-  });
-}
-
-function findMatchingSession(sessions, actType) {
-  const map = { rameur:['rameur'], corde:['corde'], sac:['sac','boxe'], renfo:['renfo'], course:['course_ext','course_tapis'], cardio_mardi:['velo','rameur','cardio','course_ext','course_tapis'] };
-  const types = map[actType] || [actType];
-  return sessions.find(s => types.includes(s.type)) || null;
-}
-
-function computeDiff(planDesc, done) {
-  const dm = planDesc.match(/(\d+)\s*min/i);
-  if (dm && done.duration_min) {
-    const diff = Math.round(done.duration_min) - parseInt(dm[1]);
-    if (Math.abs(diff)>=3) return diff>0?`+${diff} min vs plan`:`${diff} min vs plan`;
-  }
-  const rm = planDesc.match(/(\d+)\s*round/i);
-  if (rm && done.rounds) {
-    const diff = done.rounds - parseInt(rm[1]);
-    if (Math.abs(diff)>=1) return diff>0?`+${diff} round vs plan`:`${diff} round vs plan`;
-  }
-  return null;
 }
 
 function buildRecentRow(s) {
@@ -950,115 +804,6 @@ function renderSessionsList(sessions) {
     section.appendChild(body);
     listEl.appendChild(section);
   });
-}
-
-// ─── VUE : PLANNING ───────────────────────────────────────────────────────────
-function planning(main) {
-  const sessions = DB.getSessions();
-  const data = computePlanning(sessions);
-
-  main.innerHTML = `
-    <div class="page-header">
-      <h2>Planning 12 semaines</h2>
-      <div class="page-sub">Début : ${formatDate(data.allWeeks[0]?.start)} · Semaine courante : ${data.currentWeek<=12?`S${data.currentWeek}`:'Terminé'}</div>
-    </div>
-    ${data.isProgramDone?'<div class="adaptive-hint" style="margin-bottom:16px"><b>Programme terminé</b>🏆 Félicitations — 12 semaines bouclées !</div>':''}
-    <div class="planning-grid" id="planning-grid"></div>
-  `;
-
-  const grid = document.getElementById('planning-grid');
-
-  function buildPlanningRow(week, isCurrent, startOpen) {
-    const row = document.createElement('div');
-    row.className = `pw-row${isCurrent ? ' current' : ''}`;
-    const dots = [0,1,2].map(i => `<div class="pw-dot${i < week.sessionCount ? ' done' : ''}"></div>`).join('');
-    const title = isCurrent
-      ? `Semaine ${week.week}/12 · du ${formatWeekRange(week.start)}`
-      : `S${week.week} · ${formatWeekRange(week.start)}`;
-    row.innerHTML = `
-      <div class="pw-header">
-        <span class="pw-num${isCurrent ? ' pw-num-current' : ''}">S${week.week}</span>
-        <span class="pw-dates">${isCurrent ? `du ${formatWeekRange(week.start)}` : formatWeekRange(week.start)}</span>
-        <div class="pw-dots">${dots}</div>
-        <div class="pw-icons">${week.sessions.slice(0,4).map(s=>`<span>${typeIcon(s.type)}</span>`).join('')}</div>
-        <span class="pw-chevron${startOpen ? ' open' : ''}">›</span>
-      </div>
-      <div class="pw-body${startOpen ? ' open' : ''}">${buildWeekBody(week)}</div>
-    `;
-    row.querySelector('.pw-header').addEventListener('click', () => {
-      const body = row.querySelector('.pw-body');
-      const chev = row.querySelector('.pw-chevron');
-      const isOpen = body.classList.toggle('open');
-      chev.classList.toggle('open', isOpen);
-    });
-    return row;
-  }
-
-  const cw = data.currentWeek;
-  const allWeeks = data.allWeeks;
-
-  // 1 — Semaine courante (toujours ouverte)
-  const currentWeek = allWeeks.find(w => w.week === cw);
-  if (currentWeek) {
-    const currentRow = buildPlanningRow(currentWeek, true, true);
-    // Ajouter un titre de section
-    const secCurrent = document.createElement('div');
-    secCurrent.className = 'planning-section-lbl';
-    secCurrent.textContent = `Semaine ${cw}/12`;
-    grid.appendChild(secCurrent);
-    grid.appendChild(currentRow);
-  }
-
-  // 2 — Semaines futures (S+1 → fin), repliées
-  const futureWeeks = allWeeks.filter(w => w.week > cw);
-  if (futureWeeks.length) {
-    const secFuture = document.createElement('div');
-    secFuture.className = 'planning-section-lbl';
-    secFuture.textContent = 'À venir';
-    grid.appendChild(secFuture);
-    futureWeeks.forEach(week => grid.appendChild(buildPlanningRow(week, false, false)));
-  }
-
-  // 3 — Semaines passées (S-1 → S1), repliées, de la plus récente à la plus ancienne
-  const pastWeeks = allWeeks.filter(w => w.week < cw).sort((a, b) => b.week - a.week);
-  if (pastWeeks.length) {
-    const secPast = document.createElement('div');
-    secPast.className = 'planning-section-lbl';
-    secPast.textContent = 'Historique';
-    grid.appendChild(secPast);
-    pastWeeks.forEach(week => grid.appendChild(buildPlanningRow(week, false, false)));
-  }
-}
-
-function buildWeekBody(week) {
-  const p = week.plan;
-  const settings = DB.getSettings();
-  const day1 = settings.training_days?.[0] || 'vendredi';
-  const day2 = settings.training_days?.[1] || 'dimanche';
-  const bonusDay = settings.bonus_day || 'mardi';
-  const cap = s => s.charAt(0).toUpperCase() + s.slice(1);
-  const cols = [
-    { day: cap(day1), acts:[{name:'Rameur',type:'rameur',desc:p.rameur},{name:'Corde',type:'corde',desc:p.corde},{name:'Sac',type:'sac',desc:p.sac},{name:'Renfo',type:'renfo',desc:p.renfo}] },
-    { day: cap(day2), acts:[{name:'Course',type:'course',desc:p.course}] },
-    { day: `${cap(bonusDay)} (bonus)`, acts:[{name:'Cardio / Rameur',type:'cardio_mardi',desc:p.cardio_mardi}] },
-  ];
-  return cols.map(col => `
-    <div class="pw-act-col">
-      <div class="pw-act-day">${col.day}</div>
-      ${col.acts.map(act => {
-        const done = findMatchingSession(week.sessions, act.type);
-        let doneHtml = '';
-        if (done) {
-          let d = `${typeIcon(done.type)} ${formatDuration(done.duration_min)}`;
-          if (done.distance_km) d += ` · ${done.distance_km} km`;
-          if (done.pace_sec_km) d += ` · ${formatPace(done.pace_sec_km)}`;
-          doneHtml = `<div class="pw-act-done">${d}</div>`;
-          const diff = computeDiff(act.desc, done);
-          if (diff) doneHtml += `<div class="pw-act-diff">${diff}</div>`;
-        }
-        return `<div style="margin-bottom:10px"><div class="pw-act-name" style="color:${typeColor(act.type)}">${act.name} ${done?'✓':''}</div><div class="pw-act-desc">${act.desc}</div>${doneHtml}</div>`;
-      }).join('')}
-    </div>`).join('');
 }
 
 // ─── VUE : STATS ─────────────────────────────────────────────────────────────
@@ -1462,6 +1207,8 @@ function openAddModal(defaults={}) {
   document.getElementById('session-form').reset();
   document.getElementById('f-date').value = defaults.date || today();
   if (defaults.type) document.getElementById('f-type').value = defaults.type;
+  if (defaults.duration) document.getElementById('f-duration').value = Math.round(defaults.duration);
+  if (defaults.distance) document.getElementById('f-distance').value = defaults.distance;
   toggleFormFields();
   document.getElementById('modal-overlay').classList.remove('hidden');
 }
@@ -1483,6 +1230,10 @@ function openEditModal(session) {
   toggleFormFields();
   document.getElementById('modal-overlay').classList.remove('hidden');
 }
+
+function openSessionModal(d) { openAddModal(d || {}); }
+
+function openSessionModal(d) { openAddModal(d || {}); }
 
 function closeModal() { document.getElementById('modal-overlay').classList.add('hidden'); editingSessionId=null; }
 
