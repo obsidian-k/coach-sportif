@@ -35,6 +35,7 @@ async function coachView(main) {
       <div class="page-sub">Séances proposées les jours de télétravail · ${st.place || 'Noyal-sur-Vilaine'}
         <button class="link-btn" onclick="coachSetPlace()">changer de lieu</button></div>
     </div>
+    ${coachDayPicker()}
     ${coachStateHtml(ctx)}
     <div id="coach-days"><div class="loader">Lecture de la météo…</div></div>
   `;
@@ -43,13 +44,44 @@ async function coachView(main) {
   renderCoachDays();
 }
 
+const CE_DAY_LABELS = [[1,'L','Lundi'],[2,'M','Mardi'],[3,'M','Mercredi'],[4,'J','Jeudi'],[5,'V','Vendredi'],[6,'S','Samedi'],[7,'D','Dimanche']];
+
+function coachDayPicker() {
+  const sel = DB.getSettings().coach_days || [1, 5];
+  const chips = CE_DAY_LABELS.map(([n, ini, full]) =>
+    `<button class="dp-chip${sel.includes(n) ? ' on' : ''}" onclick="coachToggleDay(${n})" title="${full}" aria-pressed="${sel.includes(n)}">${ini}</button>`).join('');
+  return `
+    <div class="day-picker">
+      <span class="dp-lbl">Jours d'entraînement</span>
+      <div class="dp-chips">${chips}</div>
+      <span class="dp-count">${sel.length} jour${sel.length > 1 ? 's' : ''} / semaine</span>
+    </div>`;
+}
+
+/** Coche / décoche un jour — mémorisé dans les réglages, donc retrouvé au prochain login. */
+function coachToggleDay(n) {
+  const st = DB.getSettings();
+  const sel = new Set(st.coach_days || [1, 5]);
+  sel.has(n) ? sel.delete(n) : sel.add(n);
+  if (!sel.size) { toast('Garde au moins un jour', 'err'); return; }
+  DB.saveSettings({ ...st, coach_days: [...sel].sort((a, b) => a - b) });
+  scheduleBackup();
+  const host = document.querySelector('.day-picker');
+  if (host) host.outerHTML = coachDayPicker();
+  buildPlan();
+  renderCoachDays();
+  const card = document.querySelector('.coach-state');
+  if (card) card.outerHTML = coachStateHtml(CoachEngine.context(DB.getSessions(), today()));
+}
+
 function coachStateHtml(ctx) {
   const f = ctx.form;
   const cls = { coupure: 'warn', reprise: 'warn', surcharge: 'bad', progression: 'ok', regulier: '' }[f.state] || '';
-  const maxMin = Math.max(60, ...f.weeks.map(w => w.min));
-  const bars = f.weeks.map((w, i) => `
+  const weeks = f.weeks.slice(-6);
+  const maxMin = Math.max(60, ...weeks.map(w => w.min));
+  const bars = weeks.map((w, i) => `
     <div class="cs-bar" title="${formatDateShort(w.start)} · ${w.n} séance${w.n > 1 ? 's' : ''} · ${formatDuration(w.min)}">
-      <div class="cs-bar-fill${i === f.weeks.length - 1 ? ' now' : ''}" style="height:${Math.max(3, Math.round(w.min / maxMin * 100))}%"></div>
+      <div class="cs-bar-fill${i === weeks.length - 1 ? ' now' : ''}" style="height:${Math.max(3, Math.round(w.min / maxMin * 100))}%"></div>
     </div>`).join('');
   return `
     <div class="coach-state">
@@ -60,13 +92,12 @@ function coachStateHtml(ctx) {
       </div>
       <div class="cs-metrics">
         <div class="cs-m"><span class="cs-m-val">${f.acute}</span><span class="cs-m-key">charge 7 j</span></div>
-        <div class="cs-m"><span class="cs-m-val">${f.chronic}</span><span class="cs-m-key">moy./sem. sur 4 sem.</span></div>
-        <div class="cs-m"><span class="cs-m-val">${f.ratio || '—'}</span><span class="cs-m-key">ratio aigu / chronique</span></div>
+        <div class="cs-m"><span class="cs-m-val">${f.chronic}</span><span class="cs-m-key">moy. / sem.</span></div>
         <div class="cs-m"><span class="cs-m-val">${f.perWeek}</span><span class="cs-m-key">séances / sem.</span></div>
       </div>
       <div class="cs-chart">
         <div class="cs-bars">${bars}</div>
-        <div class="cs-bars-lbl">Charge des 8 dernières semaines</div>
+        <div class="cs-bars-lbl">6 dernières semaines</div>
       </div>
     </div>`;
 }
@@ -78,7 +109,7 @@ function renderCoachDays() {
     ? `<div class="adaptive-hint"><b>Météo indisponible</b>${coachWeatherErr} — modalités par défaut, bascule-les à la main.</div>`
     : '';
   const capped = coachPlan.capped
-    ? `<div class="adaptive-hint"><b>Semaine dense</b>${coachPlan.proposed} min proposées, au-dessus du plafond de ${coachPlan.cap} min issu de tes 4 dernières semaines — coupe une des deux séances si la fatigue est là.</div>`
+    ? `<div class="adaptive-hint"><b>Semaine dense</b>${coachPlan.proposed} min proposées sur ${coachPlan.days.length} jours, au-dessus du plafond de ${coachPlan.cap} min issu de tes 4 dernières semaines — décoche un jour si la fatigue est là.</div>`
     : '';
   el.innerHTML = warn + '<div class="coach-days">' + coachPlan.days.map(coachDayHtml).join('') + '</div>' + capped;
 }
@@ -113,7 +144,7 @@ function coachDayHtml(d) {
       </header>
       <div class="cday-weather">${slots}</div>
       <div class="cday-body">
-        <div class="cday-focus">${s.focus}</div>
+        <div class="cday-focus">${s.focus}${s.optional ? ' · optionnelle' : ''}</div>
         <div class="cday-title"><span style="color:${typeColor(s.type)}">${typeIcon(s.type)}</span> ${s.title}</div>
         <div class="cday-target">${target}</div>
         <ol class="cday-blocks">
