@@ -1,5 +1,15 @@
 [
   {
+    "date": "2026-08-01",
+    "duration_h": 7.07,
+    "rem_h": 0.97,
+    "deep_h": 2.0,
+    "light_h": 4.1,
+    "score": 50,
+    "resting_hr": 53,
+    "hrv": 41
+  },
+  {
     "date": "2026-07-31",
     "duration_h": 8.05,
     "rem_h": 2.03,
