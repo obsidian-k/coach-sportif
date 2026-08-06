@@ -1466,3 +1466,63 @@ input, select, textarea { font-family: var(--font); }
 
 /* Un KPI ne doit jamais couper son unité sur la ligne suivante. */
 .kpi-num { white-space: nowrap; }
+
+/* ══════════════════════════════════════════════════════════
+   CARTE DE PARCOURS — Leaflet, teinté à la charte
+   ══════════════════════════════════════════════════════════ */
+
+.track-wrap { position: relative; }
+
+.track-map {
+  height: 340px;
+  width: 100%;
+  border-radius: var(--radius-lg);
+  background: var(--surface-hover);
+  z-index: 0;
+}
+
+/* Les tuiles CARTO sont neutres par défaut. On les désature légèrement et on
+   les assombrit pour qu'elles s'effacent derrière le tracé, au lieu de faire
+   entrer une palette étrangère dans l'app. */
+[data-theme="dark"] .track-map .leaflet-tile-pane {
+  filter: saturate(.55) brightness(.82) contrast(1.08);
+}
+[data-theme="light"] .track-map .leaflet-tile-pane {
+  filter: saturate(.6) contrast(.95);
+}
+
+/* Contrôles Leaflet remis aux couleurs de l'app. */
+.track-map .leaflet-control-zoom a {
+  background: var(--surface);
+  color: var(--text-body);
+  border-color: var(--border);
+}
+.track-map .leaflet-control-zoom a:hover {
+  background: var(--surface-hover);
+  color: var(--acc);
+}
+.track-map .leaflet-control-attribution {
+  background: color-mix(in srgb, var(--surface) 82%, transparent);
+  color: var(--text-muted);
+  font-size: 9px;
+  padding: 1px 6px;
+}
+.track-map .leaflet-control-attribution a { color: var(--text-muted); }
+
+.map-loading {
+  position: absolute;
+  bottom: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 4px 12px;
+  background: color-mix(in srgb, var(--surface) 88%, transparent);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-full);
+  font-size: 10.5px;
+  color: var(--text-muted);
+  pointer-events: none;
+}
+
+@media (max-width: 560px) {
+  .track-map { height: 260px; }
+}

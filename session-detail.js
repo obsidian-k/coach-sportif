@@ -147,6 +147,98 @@ function renderProfileSVG(track, color, opts = {}) {
 </svg>`;
 }
 
+// ─── Vraie carte (au clic seulement) ──────────────────────────────────────────
+//
+// La galerie garde les tracés SVG : légers, instantanés, dans la charte. Mais
+// à l'ouverture d'une rando, le terrain compte plus que la pureté graphique :
+// on charge alors une vraie carte. Leaflet n'est téléchargé qu'à ce moment-là,
+// jamais au démarrage de l'app.
+
+const LEAFLET_CSS = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css';
+const LEAFLET_JS = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js';
+
+// Fonds CARTO : sobres, sans clé d'API, et déclinés clair/sombre — donc ils
+// suivent le thème de l'app au lieu de jurer avec.
+const TILES = {
+  dark: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
+  light: 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
+};
+const TILE_ATTRIB = '&copy; OpenStreetMap &copy; CARTO';
+
+let leafletPromise = null;
+
+function ensureLeaflet() {
+  if (window.L) return Promise.resolve(window.L);
+  if (leafletPromise) return leafletPromise;
+
+  leafletPromise = new Promise((resolve, reject) => {
+    if (!document.querySelector(`link[href="${LEAFLET_CSS}"]`)) {
+      const link = document.createElement('link');
+      link.rel = 'stylesheet';
+      link.href = LEAFLET_CSS;
+      document.head.appendChild(link);
+    }
+    const script = document.createElement('script');
+    script.src = LEAFLET_JS;
+    script.onload = () => resolve(window.L);
+    script.onerror = () => reject(new Error('Leaflet indisponible'));
+    document.head.appendChild(script);
+    // Hors ligne, onerror peut ne jamais se déclencher : on borne l'attente.
+    setTimeout(() => { if (!window.L) reject(new Error('délai dépassé')); }, 6000);
+  }).catch(e => { leafletPromise = null; throw e; });
+
+  return leafletPromise;
+}
+
+/**
+ * Remplace le tracé SVG par une vraie carte. En cas d'échec (hors ligne, CDN
+ * bloqué), on ne casse rien : le SVG déjà en place reste affiché.
+ */
+async function initTrackMap(track, color, holderId) {
+  const holder = document.getElementById(holderId);
+  if (!holder || !track.pts || track.pts.length < 2) return;
+
+  let L;
+  try {
+    L = await ensureLeaflet();
+  } catch {
+    holder.querySelector('.map-loading')?.remove();
+    return;                       // le tracé SVG reste, c'est le repli
+  }
+
+  const svg = holder.querySelector('.track-svg');
+  const canvas = document.createElement('div');
+  canvas.className = 'track-map';
+  holder.appendChild(canvas);
+
+  const theme = document.documentElement.getAttribute('data-theme') === 'light' ? 'light' : 'dark';
+  const map = L.map(canvas, {
+    zoomControl: true, attributionControl: true,
+    scrollWheelZoom: false,       // la molette doit défiler la fiche, pas zoomer
+  });
+  L.tileLayer(TILES[theme], { attribution: TILE_ATTRIB, maxZoom: 18 }).addTo(map);
+
+  // Deux traits : un halo large, puis le tracé net par-dessus. Même traitement
+  // que le SVG, pour que la carte reste dans la charte.
+  L.polyline(track.pts, { color, weight: 7, opacity: 0.25, lineJoin: 'round' }).addTo(map);
+  const line = L.polyline(track.pts, { color, weight: 3, opacity: 1, lineJoin: 'round' }).addTo(map);
+
+  const start = track.pts[0];
+  L.circleMarker(start, {
+    radius: 6, color, weight: 3,
+    fillColor: theme === 'light' ? '#fff' : '#141416', fillOpacity: 1,
+  }).addTo(map);
+
+  map.fitBounds(line.getBounds(), { padding: [22, 22] });
+
+  // La fiche s'ouvre dans une modale : Leaflet doit remesurer une fois que le
+  // conteneur a sa taille définitive.
+  setTimeout(() => map.invalidateSize(), 60);
+
+  holder.querySelector('.map-loading')?.remove();
+  if (svg) svg.remove();          // la carte a pris le relais
+}
+
 // ─── Blocs d'affichage ────────────────────────────────────────────────────────
 
 function statChip(value, label) {
@@ -169,13 +261,20 @@ function trackBlockHtml(session, track) {
   if (session.duration_min) stats.push(statChip(formatDuration(session.duration_min), 'durée'));
   if (track.ele_max) stats.push(statChip(`${track.ele_max} m`, 'point haut'));
 
+  // Le SVG s'affiche immédiatement, la carte le remplace dès qu'elle est
+  // prête : jamais de rectangle vide en attendant le réseau.
   return `
     <div class="detail-section">
       <div class="ds-stats">${stats.join('')}</div>
-      <div class="track-wrap">${renderTrackSVG(track, color)}</div>
+      <div class="track-wrap" id="${TRACK_MAP_ID}">
+        ${renderTrackSVG(track, color)}
+        <div class="map-loading">Chargement de la carte…</div>
+      </div>
       ${renderProfileSVG(track, color)}
     </div>`;
 }
+
+const TRACK_MAP_ID = 'track-map-holder';
 
 /** Encart des séries de musculation. */
 function exercisesBlockHtml(session) {
@@ -332,7 +431,11 @@ async function renderSessionDetail(session, container) {
 
   if (isTraceType(session.type)) {
     const track = await Tracks.get(session.id);
-    if (track) container.innerHTML = trackBlockHtml(session, track) + container.innerHTML;
+    if (track) {
+      container.innerHTML = trackBlockHtml(session, track) + container.innerHTML;
+      container.classList.remove('hidden');
+      initTrackMap(track, typeColor(session.type), TRACK_MAP_ID);
+    }
   }
 
   container.classList.toggle('hidden', !container.innerHTML.trim());
