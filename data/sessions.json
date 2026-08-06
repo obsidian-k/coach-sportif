@@ -1,5 +1,197 @@
 [
   {
+    "id": "g_23872492689",
+    "date": "2026-08-06",
+    "source": "garmin",
+    "type": "course_ext",
+    "title": "Noyal-sur-Vilaine Course à pied",
+    "duration_min": 53.6,
+    "calories": 611,
+    "distance_km": 8.0,
+    "pace_sec_km": 402,
+    "hr_avg": 154,
+    "hr_max": 166,
+    "elevation_m": 40,
+    "rounds": null,
+    "notes": ""
+  },
+  {
+    "id": "g_23830206688",
+    "date": "2026-08-02",
+    "source": "garmin",
+    "type": "course_ext",
+    "title": "Noyal-sur-Vilaine Course à pied",
+    "duration_min": 37.3,
+    "calories": 432,
+    "distance_km": 5.72,
+    "pace_sec_km": 391,
+    "hr_avg": 154,
+    "hr_max": 167,
+    "elevation_m": 31,
+    "rounds": null,
+    "notes": ""
+  },
+  {
+    "id": "g_23773289645",
+    "date": "2026-07-29",
+    "source": "garmin",
+    "type": "sac",
+    "title": "F3b KickBoxing",
+    "duration_min": 11.3,
+    "calories": 108,
+    "distance_km": null,
+    "pace_sec_km": null,
+    "hr_avg": 132,
+    "hr_max": 150,
+    "elevation_m": null,
+    "rounds": null,
+    "notes": ""
+  },
+  {
+    "id": "g_23773288613",
+    "date": "2026-07-29",
+    "source": "garmin",
+    "type": "corde",
+    "title": "Jump Rope",
+    "duration_min": 15.1,
+    "calories": 149,
+    "distance_km": null,
+    "pace_sec_km": null,
+    "hr_avg": 134,
+    "hr_max": 150,
+    "elevation_m": null,
+    "rounds": null,
+    "notes": ""
+  },
+  {
+    "id": "g_23773006110",
+    "date": "2026-07-29",
+    "source": "garmin",
+    "type": "rameur",
+    "title": "Rameur d'intérieur",
+    "duration_min": 16.0,
+    "calories": 125,
+    "distance_km": null,
+    "pace_sec_km": null,
+    "hr_avg": 117,
+    "hr_max": 138,
+    "elevation_m": null,
+    "rounds": null,
+    "notes": ""
+  },
+  {
+    "id": "g_23747339806",
+    "date": "2026-07-27",
+    "source": "garmin",
+    "type": "course_ext",
+    "title": "Noyal-sur-Vilaine Course à pied",
+    "duration_min": 39.5,
+    "calories": 455,
+    "distance_km": 6.0,
+    "pace_sec_km": 395,
+    "hr_avg": 153,
+    "hr_max": 170,
+    "elevation_m": 38,
+    "rounds": null,
+    "notes": ""
+  },
+  {
+    "id": "g_23725101816",
+    "date": "2026-07-25",
+    "source": "garmin",
+    "type": "sac",
+    "title": "F3b KickBoxing",
+    "duration_min": 15.0,
+    "calories": 168,
+    "distance_km": null,
+    "pace_sec_km": null,
+    "hr_avg": 150,
+    "hr_max": 167,
+    "elevation_m": null,
+    "rounds": null,
+    "notes": ""
+  },
+  {
+    "id": "g_23725099088",
+    "date": "2026-07-25",
+    "source": "garmin",
+    "type": "corde",
+    "title": "Jump Rope",
+    "duration_min": 15.0,
+    "calories": 145,
+    "distance_km": null,
+    "pace_sec_km": null,
+    "hr_avg": 134,
+    "hr_max": 151,
+    "elevation_m": null,
+    "rounds": null,
+    "notes": ""
+  },
+  {
+    "id": "g_23724564936",
+    "date": "2026-07-25",
+    "source": "garmin",
+    "type": "rameur",
+    "title": "Rameur d'intérieur",
+    "duration_min": 16.0,
+    "calories": 138,
+    "distance_km": null,
+    "pace_sec_km": null,
+    "hr_avg": 124,
+    "hr_max": 143,
+    "elevation_m": null,
+    "rounds": null,
+    "notes": ""
+  },
+  {
+    "id": "g_23700194841",
+    "date": "2026-07-23",
+    "source": "garmin",
+    "type": "course_ext",
+    "title": "Noyal-sur-Vilaine Course à pied",
+    "duration_min": 40.2,
+    "calories": 455,
+    "distance_km": 5.98,
+    "pace_sec_km": 403,
+    "hr_avg": 153,
+    "hr_max": 165,
+    "elevation_m": 35,
+    "rounds": null,
+    "notes": ""
+  },
+  {
+    "id": "g_23627851910",
+    "date": "2026-07-17",
+    "source": "garmin",
+    "type": "course_ext",
+    "title": "Noyal-sur-Vilaine Course à pied",
+    "duration_min": 40.0,
+    "calories": 457,
+    "distance_km": 5.99,
+    "pace_sec_km": 401,
+    "hr_avg": 151,
+    "hr_max": 166,
+    "elevation_m": 32,
+    "rounds": null,
+    "notes": ""
+  },
+  {
+    "id": "g_23520882558",
+    "date": "2026-07-08",
+    "source": "garmin",
+    "type": "course_ext",
+    "title": "Noyal-sur-Vilaine Course à pied",
+    "duration_min": 24.4,
+    "calories": 289,
+    "distance_km": 3.88,
+    "pace_sec_km": 377,
+    "hr_avg": 156,
+    "hr_max": 172,
+    "elevation_m": 19,
+    "rounds": null,
+    "notes": ""
+  },
+  {
     "id": "g_23474929165",
     "date": "2026-07-04",
     "source": "garmin",
@@ -222,21 +414,6 @@
     "elevation_m": 54,
     "rounds": null,
     "notes": ""
-  },
-  {
-    "date": "2026-04-19",
-    "type": "course_ext",
-    "title": "Course ext.",
-    "duration_min": 40,
-    "calories": 437,
-    "distance_km": 5.81,
-    "pace_sec_km": 413,
-    "rounds": null,
-    "hr_avg": 147,
-    "hr_max": null,
-    "notes": "",
-    "id": "m1776601925613",
-    "source": "manual"
   },
   {
     "id": "g_22580536124",
@@ -927,7 +1104,8 @@
     "rounds": null,
     "elevation_m": 27,
     "notes": "",
-    "source": "garmin"
+    "source": "garmin",
+    "garmin_id": "21002406363"
   },
   {
     "id": "g_2025-11-15_30",
@@ -1007,7 +1185,8 @@
     "rounds": null,
     "elevation_m": 45,
     "notes": "",
-    "source": "garmin"
+    "source": "garmin",
+    "garmin_id": "20791321165"
   },
   {
     "id": "g_2025-09-28_35",
@@ -1055,7 +1234,8 @@
     "rounds": null,
     "elevation_m": 49,
     "notes": "",
-    "source": "garmin"
+    "source": "garmin",
+    "garmin_id": "20452461980"
   },
   {
     "id": "g_2025-09-20_38",
@@ -1087,7 +1267,8 @@
     "rounds": null,
     "elevation_m": 29,
     "notes": "",
-    "source": "garmin"
+    "source": "garmin",
+    "garmin_id": "20380499124"
   },
   {
     "id": "s_15799989705",
@@ -1135,7 +1316,8 @@
     "rounds": null,
     "elevation_m": 82,
     "notes": "",
-    "source": "garmin"
+    "source": "garmin",
+    "garmin_id": "20234266092"
   },
   {
     "id": "g_2025-08-23_42",
@@ -1215,7 +1397,8 @@
     "rounds": null,
     "elevation_m": 51,
     "notes": "",
-    "source": "garmin"
+    "source": "garmin",
+    "garmin_id": "20073804382"
   },
   {
     "id": "g_2025-08-15_47",
@@ -1311,7 +1494,8 @@
     "rounds": null,
     "elevation_m": 30,
     "notes": "",
-    "source": "garmin"
+    "source": "garmin",
+    "garmin_id": "19999193411"
   },
   {
     "id": "g_2025-08-06_53",
@@ -1375,7 +1559,8 @@
     "rounds": null,
     "elevation_m": 45,
     "notes": "",
-    "source": "garmin"
+    "source": "garmin",
+    "garmin_id": "19923345304"
   },
   {
     "id": "g_2025-07-27_56",
@@ -1407,7 +1592,8 @@
     "rounds": null,
     "elevation_m": 29,
     "notes": "",
-    "source": "garmin"
+    "source": "garmin",
+    "garmin_id": "19850678291"
   },
   {
     "id": "g_2025-07-20_58",
@@ -1455,7 +1641,8 @@
     "rounds": null,
     "elevation_m": 26,
     "notes": "",
-    "source": "garmin"
+    "source": "garmin",
+    "garmin_id": "19706383090"
   },
   {
     "id": "g_2025-07-06_61",
@@ -1487,7 +1674,8 @@
     "rounds": null,
     "elevation_m": 46,
     "notes": "",
-    "source": "garmin"
+    "source": "garmin",
+    "garmin_id": "19636298489"
   },
   {
     "id": "g_2025-06-28_63",
@@ -1503,7 +1691,8 @@
     "rounds": null,
     "elevation_m": 39,
     "notes": "",
-    "source": "garmin"
+    "source": "garmin",
+    "garmin_id": "19566722879"
   },
   {
     "id": "g_2025-06-22_64",
@@ -1551,7 +1740,8 @@
     "rounds": null,
     "elevation_m": 43,
     "notes": "",
-    "source": "garmin"
+    "source": "garmin",
+    "garmin_id": "19430055949"
   },
   {
     "id": "g_2025-06-09_67",
@@ -1615,7 +1805,8 @@
     "rounds": null,
     "elevation_m": 23,
     "notes": "",
-    "source": "garmin"
+    "source": "garmin",
+    "garmin_id": "19217811092"
   },
   {
     "id": "g_2025-05-17_71",
@@ -1631,7 +1822,8 @@
     "rounds": null,
     "elevation_m": 30,
     "notes": "",
-    "source": "garmin"
+    "source": "garmin",
+    "garmin_id": "19148674658"
   },
   {
     "id": "g_2025-05-03_72",
@@ -1727,7 +1919,8 @@
     "rounds": null,
     "elevation_m": 41,
     "notes": "",
-    "source": "garmin"
+    "source": "garmin",
+    "garmin_id": "18536137703"
   },
   {
     "id": "g_2025-03-09_78",
@@ -1759,7 +1952,8 @@
     "rounds": null,
     "elevation_m": 43,
     "notes": "",
-    "source": "garmin"
+    "source": "garmin",
+    "garmin_id": "18470940081"
   },
   {
     "id": "g_2025-02-22_80",
@@ -1791,7 +1985,8 @@
     "rounds": null,
     "elevation_m": 53,
     "notes": "",
-    "source": "garmin"
+    "source": "garmin",
+    "garmin_id": "18281699234"
   },
   {
     "id": "g_2025-02-09_82",
@@ -1855,7 +2050,8 @@
     "rounds": null,
     "elevation_m": 50,
     "notes": "",
-    "source": "garmin"
+    "source": "garmin",
+    "garmin_id": "18158177627"
   },
   {
     "id": "s_13395898038",
@@ -1919,7 +2115,8 @@
     "rounds": null,
     "elevation_m": 32,
     "notes": "",
-    "source": "garmin"
+    "source": "garmin",
+    "garmin_id": "18034858988"
   },
   {
     "id": "g_2025-01-12_90",
@@ -1967,7 +2164,8 @@
     "rounds": null,
     "elevation_m": 55,
     "notes": "",
-    "source": "garmin"
+    "source": "garmin",
+    "garmin_id": "17971859371"
   },
   {
     "id": "s_13271677745",
@@ -2063,7 +2261,8 @@
     "rounds": null,
     "elevation_m": 39,
     "notes": "",
-    "source": "garmin"
+    "source": "garmin",
+    "garmin_id": "17912793710"
   },
   {
     "id": "g_2024-12-28_97",
@@ -2079,7 +2278,8 @@
     "rounds": null,
     "elevation_m": 51,
     "notes": "",
-    "source": "garmin"
+    "source": "garmin",
+    "garmin_id": "17855314675"
   },
   {
     "id": "g_2024-12-21_98",
@@ -2095,7 +2295,8 @@
     "rounds": null,
     "elevation_m": 48,
     "notes": "",
-    "source": "garmin"
+    "source": "garmin",
+    "garmin_id": "17806408741"
   },
   {
     "id": "g_2024-12-15_99",
@@ -2143,7 +2344,8 @@
     "rounds": null,
     "elevation_m": 45,
     "notes": "",
-    "source": "garmin"
+    "source": "garmin",
+    "garmin_id": "17752457798"
   },
   {
     "id": "g_2024-12-01_104",
@@ -2207,7 +2409,8 @@
     "rounds": null,
     "elevation_m": 53,
     "notes": "",
-    "source": "garmin"
+    "source": "garmin",
+    "garmin_id": "17655486057"
   },
   {
     "id": "g_2024-11-24_108",
@@ -2271,7 +2474,8 @@
     "rounds": null,
     "elevation_m": 70,
     "notes": "",
-    "source": "garmin"
+    "source": "garmin",
+    "garmin_id": "17603091789"
   },
   {
     "id": "g_2024-11-17_111",
@@ -2319,7 +2523,8 @@
     "rounds": null,
     "elevation_m": 23,
     "notes": "",
-    "source": "garmin"
+    "source": "garmin",
+    "garmin_id": "17550391389"
   },
   {
     "id": "g_2024-11-09_113",
@@ -2335,7 +2540,8 @@
     "rounds": null,
     "elevation_m": 28,
     "notes": "",
-    "source": "garmin"
+    "source": "garmin",
+    "garmin_id": "17494757789"
   },
   {
     "id": "g_2024-11-02_114",
@@ -2351,7 +2557,8 @@
     "rounds": null,
     "elevation_m": 31,
     "notes": "",
-    "source": "garmin"
+    "source": "garmin",
+    "garmin_id": "17437403441"
   },
   {
     "id": "g_2024-10-26_115",
@@ -2367,7 +2574,8 @@
     "rounds": null,
     "elevation_m": 37,
     "notes": "",
-    "source": "garmin"
+    "source": "garmin",
+    "garmin_id": "17382556929"
   },
   {
     "id": "g_2024-10-20_116",
@@ -2463,7 +2671,8 @@
     "rounds": null,
     "elevation_m": 47,
     "notes": "",
-    "source": "garmin"
+    "source": "garmin",
+    "garmin_id": "17207116462"
   },
   {
     "id": "g_2024-09-22_123",
@@ -2511,7 +2720,8 @@
     "rounds": null,
     "elevation_m": 391,
     "notes": "",
-    "source": "garmin"
+    "source": "garmin",
+    "garmin_id": "17065441379"
   },
   {
     "id": "g_2024-09-17_126",
@@ -2527,7 +2737,8 @@
     "rounds": null,
     "elevation_m": 69,
     "notes": "",
-    "source": "garmin"
+    "source": "garmin",
+    "garmin_id": "17056932527"
   },
   {
     "id": "g_2024-09-17_125",
@@ -2543,7 +2754,8 @@
     "rounds": null,
     "elevation_m": 128,
     "notes": "",
-    "source": "garmin"
+    "source": "garmin",
+    "garmin_id": "17057214726"
   },
   {
     "id": "g_2024-09-15_127",
@@ -2703,7 +2915,8 @@
     "rounds": null,
     "elevation_m": 68,
     "notes": "",
-    "source": "garmin"
+    "source": "garmin",
+    "garmin_id": "16242313798"
   },
   {
     "id": "g_2024-06-23_137",
@@ -2751,7 +2964,8 @@
     "rounds": null,
     "elevation_m": 734,
     "notes": "",
-    "source": "garmin"
+    "source": "garmin",
+    "garmin_id": "15787781012"
   },
   {
     "id": "g_2024-06-02_140",
@@ -2783,7 +2997,8 @@
     "rounds": null,
     "elevation_m": 61,
     "notes": "",
-    "source": "garmin"
+    "source": "garmin",
+    "garmin_id": "15684094440"
   },
   {
     "id": "g_2024-05-25_142",
@@ -2799,7 +3014,8 @@
     "rounds": null,
     "elevation_m": 17,
     "notes": "",
-    "source": "garmin"
+    "source": "garmin",
+    "garmin_id": "15570087001"
   },
   {
     "id": "g_2024-05-20_143",
@@ -2847,7 +3063,8 @@
     "rounds": null,
     "elevation_m": 66,
     "notes": "",
-    "source": "garmin"
+    "source": "garmin",
+    "garmin_id": "15450685342"
   },
   {
     "id": "g_2024-05-12_146",
@@ -2895,7 +3112,8 @@
     "rounds": null,
     "elevation_m": 60,
     "notes": "",
-    "source": "garmin"
+    "source": "garmin",
+    "garmin_id": "15206514703"
   },
   {
     "id": "g_2024-04-27_149",
@@ -2911,7 +3129,8 @@
     "rounds": null,
     "elevation_m": 67,
     "notes": "",
-    "source": "garmin"
+    "source": "garmin",
+    "garmin_id": "15097159185"
   },
   {
     "id": "g_2024-04-14_150",
@@ -2943,7 +3162,8 @@
     "rounds": null,
     "elevation_m": 65,
     "notes": "",
-    "source": "garmin"
+    "source": "garmin",
+    "garmin_id": "14873943902"
   },
   {
     "id": "g_2024-04-07_152",
@@ -2975,7 +3195,8 @@
     "rounds": null,
     "elevation_m": 81,
     "notes": "",
-    "source": "garmin"
+    "source": "garmin",
+    "garmin_id": "14757434864"
   },
   {
     "id": "g_2024-03-31_154",
@@ -3007,7 +3228,8 @@
     "rounds": null,
     "elevation_m": 66,
     "notes": "",
-    "source": "garmin"
+    "source": "garmin",
+    "garmin_id": "14648016985"
   },
   {
     "id": "g_2024-03-24_156",
@@ -3039,7 +3261,8 @@
     "rounds": null,
     "elevation_m": 65,
     "notes": "",
-    "source": "garmin"
+    "source": "garmin",
+    "garmin_id": "14541998135"
   },
   {
     "id": "g_2024-03-17_158",
@@ -3071,7 +3294,8 @@
     "rounds": null,
     "elevation_m": 55,
     "notes": "",
-    "source": "garmin"
+    "source": "garmin",
+    "garmin_id": "14447186291"
   },
   {
     "id": "g_2024-03-02_160",
@@ -3087,7 +3311,8 @@
     "rounds": null,
     "elevation_m": 69,
     "notes": "",
-    "source": "garmin"
+    "source": "garmin",
+    "garmin_id": "14213904094"
   },
   {
     "id": "g_2024-02-25_161",
@@ -3119,7 +3344,8 @@
     "rounds": null,
     "elevation_m": 60,
     "notes": "",
-    "source": "garmin"
+    "source": "garmin",
+    "garmin_id": "14107990867"
   },
   {
     "id": "g_2024-02-17_163",
@@ -3135,7 +3361,8 @@
     "rounds": null,
     "elevation_m": 54,
     "notes": "",
-    "source": "garmin"
+    "source": "garmin",
+    "garmin_id": "14001895193"
   },
   {
     "id": "g_2024-02-13_164",
@@ -3183,7 +3410,8 @@
     "rounds": null,
     "elevation_m": 59,
     "notes": "",
-    "source": "garmin"
+    "source": "garmin",
+    "garmin_id": "13897573397"
   },
   {
     "id": "g_2024-02-04_167",
@@ -3215,7 +3443,8 @@
     "rounds": null,
     "elevation_m": 18,
     "notes": "",
-    "source": "garmin"
+    "source": "garmin",
+    "garmin_id": "13488171745"
   },
   {
     "id": "g_2024-01-07_169",
@@ -3247,7 +3476,8 @@
     "rounds": null,
     "elevation_m": 111,
     "notes": "",
-    "source": "garmin"
+    "source": "garmin",
+    "garmin_id": "13315809470"
   },
   {
     "id": "g_2023-12-31_171",
@@ -3295,23 +3525,8 @@
     "rounds": null,
     "elevation_m": 15,
     "notes": "",
-    "source": "garmin"
-  },
-  {
-    "id": "s_10369087856",
-    "date": "2023-12-12",
-    "type": "rando",
-    "title": "Randonnée dans l'après-midi",
-    "duration_min": 132.1,
-    "calories": 628,
-    "hr_avg": 114,
-    "hr_max": 142,
-    "distance_km": 9.32,
-    "pace_sec_km": null,
-    "rounds": null,
-    "elevation_m": 161,
-    "notes": "",
-    "source": "strava"
+    "source": "garmin",
+    "garmin_id": "13119828957"
   },
   {
     "id": "g_2023-12-12_174",
@@ -3327,7 +3542,8 @@
     "rounds": null,
     "elevation_m": 161,
     "notes": "",
-    "source": "garmin"
+    "source": "garmin",
+    "garmin_id": "13074935311"
   },
   {
     "id": "g_2023-11-26_175",
@@ -3647,7 +3863,8 @@
     "rounds": null,
     "elevation_m": 900,
     "notes": "",
-    "source": "garmin"
+    "source": "garmin",
+    "garmin_id": "11543312405"
   },
   {
     "id": "g_2023-07-09_194",
@@ -3746,22 +3963,6 @@
     "source": "garmin"
   },
   {
-    "id": "s_9068901018",
-    "date": "2023-05-14",
-    "type": "vtt",
-    "title": "Sortie VTT le matin",
-    "duration_min": 158.1,
-    "calories": 877,
-    "hr_avg": 133,
-    "hr_max": 168,
-    "distance_km": 36.4,
-    "pace_sec_km": null,
-    "rounds": null,
-    "elevation_m": 313,
-    "notes": "",
-    "source": "strava"
-  },
-  {
     "id": "g_2023-05-14_200",
     "date": "2023-05-14",
     "type": "vtt",
@@ -3775,7 +3976,8 @@
     "rounds": null,
     "elevation_m": 314,
     "notes": "",
-    "source": "garmin"
+    "source": "garmin",
+    "garmin_id": "11113691055"
   },
   {
     "id": "g_2023-04-30_201",
@@ -3791,7 +3993,8 @@
     "rounds": null,
     "elevation_m": 224,
     "notes": "",
-    "source": "garmin"
+    "source": "garmin",
+    "garmin_id": "11012843086"
   },
   {
     "id": "g_2023-04-24_203",
@@ -3842,22 +4045,6 @@
     "source": "garmin"
   },
   {
-    "id": "s_8858233928",
-    "date": "2023-04-09",
-    "type": "vtt",
-    "title": "Sortie VTT le matin",
-    "duration_min": 73.8,
-    "calories": 365,
-    "hr_avg": 121,
-    "hr_max": 151,
-    "distance_km": 14.53,
-    "pace_sec_km": null,
-    "rounds": null,
-    "elevation_m": 141,
-    "notes": "",
-    "source": "strava"
-  },
-  {
     "id": "g_2023-04-09_205",
     "date": "2023-04-09",
     "type": "vtt",
@@ -3871,7 +4058,8 @@
     "rounds": null,
     "elevation_m": 142,
     "notes": "",
-    "source": "garmin"
+    "source": "garmin",
+    "garmin_id": "10865745715"
   },
   {
     "id": "g_2023-04-03_207",
@@ -4034,22 +4222,6 @@
     "source": "garmin"
   },
   {
-    "id": "s_8585734879",
-    "date": "2023-02-19",
-    "type": "vtt",
-    "title": "Sortie VTT le matin",
-    "duration_min": 100.6,
-    "calories": 553,
-    "hr_avg": 126,
-    "hr_max": 154,
-    "distance_km": 24.28,
-    "pace_sec_km": null,
-    "rounds": null,
-    "elevation_m": 128,
-    "notes": "",
-    "source": "strava"
-  },
-  {
     "id": "g_2023-02-19_216",
     "date": "2023-02-19",
     "type": "vtt",
@@ -4063,23 +4235,8 @@
     "rounds": null,
     "elevation_m": 128,
     "notes": "",
-    "source": "garmin"
-  },
-  {
-    "id": "s_8547100314",
-    "date": "2023-02-12",
-    "type": "vtt",
-    "title": "Sortie VTT le matin",
-    "duration_min": 90,
-    "calories": 499,
-    "hr_avg": 131,
-    "hr_max": 166,
-    "distance_km": 14.91,
-    "pace_sec_km": null,
-    "rounds": null,
-    "elevation_m": 164,
-    "notes": "",
-    "source": "strava"
+    "source": "garmin",
+    "garmin_id": "10540404949"
   },
   {
     "id": "g_2023-02-12_217",
@@ -4095,7 +4252,8 @@
     "rounds": null,
     "elevation_m": 165,
     "notes": "",
-    "source": "garmin"
+    "source": "garmin",
+    "garmin_id": "10494182662"
   },
   {
     "id": "g_2023-01-29_219",
@@ -4130,22 +4288,6 @@
     "source": "garmin"
   },
   {
-    "id": "s_8394601420",
-    "date": "2023-01-15",
-    "type": "vtt",
-    "title": "Sortie VTT le matin",
-    "duration_min": 106.8,
-    "calories": 620,
-    "hr_avg": 125,
-    "hr_max": 156,
-    "distance_km": 24.78,
-    "pace_sec_km": null,
-    "rounds": null,
-    "elevation_m": 169,
-    "notes": "",
-    "source": "strava"
-  },
-  {
     "id": "g_2023-01-15_220",
     "date": "2023-01-15",
     "type": "vtt",
@@ -4159,7 +4301,8 @@
     "rounds": null,
     "elevation_m": 169,
     "notes": "",
-    "source": "garmin"
+    "source": "garmin",
+    "garmin_id": "10312061914"
   },
   {
     "id": "g_2023-01-12_221",
@@ -4322,22 +4465,6 @@
     "source": "garmin"
   },
   {
-    "id": "s_8174582263",
-    "date": "2022-11-27",
-    "type": "vtt",
-    "title": "Sortie VTT le matin",
-    "duration_min": 94.3,
-    "calories": 540,
-    "hr_avg": 129,
-    "hr_max": 161,
-    "distance_km": 16.59,
-    "pace_sec_km": null,
-    "rounds": null,
-    "elevation_m": 157,
-    "notes": "",
-    "source": "strava"
-  },
-  {
     "id": "g_2022-11-27_231",
     "date": "2022-11-27",
     "type": "vtt",
@@ -4351,7 +4478,8 @@
     "rounds": null,
     "elevation_m": 157,
     "notes": "",
-    "source": "garmin"
+    "source": "garmin",
+    "garmin_id": "10044287241"
   },
   {
     "id": "g_2022-11-21_232",
@@ -4399,7 +4527,8 @@
     "rounds": null,
     "elevation_m": 307,
     "notes": "",
-    "source": "garmin"
+    "source": "garmin",
+    "garmin_id": "9980088904"
   },
   {
     "id": "g_2022-11-14_235",
@@ -4415,23 +4544,8 @@
     "rounds": null,
     "elevation_m": 36,
     "notes": "",
-    "source": "garmin"
-  },
-  {
-    "id": "s_8111710362",
-    "date": "2022-11-13",
-    "type": "vtt",
-    "title": "Sortie VTT le matin",
-    "duration_min": 220.6,
-    "calories": 1098,
-    "hr_avg": 127,
-    "hr_max": 158,
-    "distance_km": 40.01,
-    "pace_sec_km": null,
-    "rounds": null,
-    "elevation_m": 399,
-    "notes": "",
-    "source": "strava"
+    "source": "garmin",
+    "garmin_id": "9973828393"
   },
   {
     "id": "g_2022-11-13_236",
@@ -4447,7 +4561,8 @@
     "rounds": null,
     "elevation_m": 399,
     "notes": "",
-    "source": "garmin"
+    "source": "garmin",
+    "garmin_id": "9969103137"
   },
   {
     "id": "g_2022-11-06_237",
@@ -4479,7 +4594,8 @@
     "rounds": null,
     "elevation_m": 75,
     "notes": "",
-    "source": "garmin"
+    "source": "garmin",
+    "garmin_id": "9921122190"
   },
   {
     "id": "g_2022-10-30_239",
@@ -4495,7 +4611,8 @@
     "rounds": null,
     "elevation_m": null,
     "notes": "",
-    "source": "garmin"
+    "source": "garmin",
+    "garmin_id": "18480545102"
   },
   {
     "id": "s_8037232812",
@@ -4527,7 +4644,8 @@
     "rounds": null,
     "elevation_m": 106,
     "notes": "",
-    "source": "garmin"
+    "source": "garmin",
+    "garmin_id": "9868137866"
   },
   {
     "id": "g_2022-10-20_241",
@@ -4559,23 +4677,8 @@
     "rounds": null,
     "elevation_m": 84,
     "notes": "",
-    "source": "garmin"
-  },
-  {
-    "id": "s_7972915419",
-    "date": "2022-10-16",
-    "type": "vtt",
-    "title": "VTT_Bleau_Utagawa_3273",
-    "duration_min": 130.5,
-    "calories": 717,
-    "hr_avg": null,
-    "hr_max": null,
-    "distance_km": 34.59,
-    "pace_sec_km": null,
-    "rounds": null,
-    "elevation_m": 226,
-    "notes": "",
-    "source": "strava"
+    "source": "garmin",
+    "garmin_id": "9811314613"
   },
   {
     "id": "g_2022-10-16_243",
@@ -4591,7 +4694,8 @@
     "rounds": null,
     "elevation_m": null,
     "notes": "",
-    "source": "garmin"
+    "source": "garmin",
+    "garmin_id": "9809347021"
   },
   {
     "id": "g_2022-10-15_244",
@@ -4607,7 +4711,8 @@
     "rounds": null,
     "elevation_m": 30,
     "notes": "",
-    "source": "garmin"
+    "source": "garmin",
+    "garmin_id": "18480545067"
   },
   {
     "id": "g_2022-10-09_245",
@@ -4623,7 +4728,8 @@
     "rounds": null,
     "elevation_m": 41,
     "notes": "",
-    "source": "garmin"
+    "source": "garmin",
+    "garmin_id": "18480545009"
   },
   {
     "id": "g_2022-10-06_246",
@@ -4655,7 +4761,8 @@
     "rounds": null,
     "elevation_m": 192,
     "notes": "",
-    "source": "garmin"
+    "source": "garmin",
+    "garmin_id": "9599887883"
   },
   {
     "id": "g_2022-09-12_248",
@@ -4671,7 +4778,8 @@
     "rounds": null,
     "elevation_m": 43,
     "notes": "",
-    "source": "garmin"
+    "source": "garmin",
+    "garmin_id": "18480544926"
   },
   {
     "id": "g_2022-08-27_249",
@@ -4786,22 +4894,6 @@
     "source": "garmin"
   },
   {
-    "id": "s_7183032060",
-    "date": "2022-05-22",
-    "type": "velo",
-    "title": "Vélo du matin",
-    "duration_min": 55.5,
-    "calories": 527,
-    "hr_avg": 144,
-    "hr_max": 162,
-    "distance_km": 16.94,
-    "pace_sec_km": null,
-    "rounds": null,
-    "elevation_m": 79,
-    "notes": "",
-    "source": "strava"
-  },
-  {
     "id": "g_2022-05-22_256",
     "date": "2022-05-22",
     "type": "vtt",
@@ -4815,7 +4907,8 @@
     "rounds": null,
     "elevation_m": 79,
     "notes": "",
-    "source": "garmin"
+    "source": "garmin",
+    "garmin_id": "8870094877"
   },
   {
     "id": "g_2022-05-19_257",
@@ -4879,7 +4972,8 @@
     "rounds": null,
     "elevation_m": 476,
     "notes": "",
-    "source": "garmin"
+    "source": "garmin",
+    "garmin_id": "8742663783"
   },
   {
     "id": "g_2022-04-30_261",
@@ -4895,7 +4989,8 @@
     "rounds": null,
     "elevation_m": 597,
     "notes": "",
-    "source": "garmin"
+    "source": "garmin",
+    "garmin_id": "8742655679"
   },
   {
     "id": "g_2022-04-28_262",
