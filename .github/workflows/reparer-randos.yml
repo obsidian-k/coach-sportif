@@ -1,0 +1,44 @@
+name: Reparer les randos
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  reparer:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'
+
+      - run: pip install garminconnect python-dotenv
+
+      - name: Reclasser les seances
+        run: python reclass_sessions.py --apply
+
+      - name: Rattacher les identifiants Garmin
+        env:
+          GARMIN_EMAIL: ${{ secrets.GARMIN_EMAIL }}
+          GARMIN_PASSWORD: ${{ secrets.GARMIN_PASSWORD }}
+        run: python relink_garmin_ids.py --apply
+
+      - name: Telecharger les traces GPS
+        env:
+          GARMIN_EMAIL: ${{ secrets.GARMIN_EMAIL }}
+          GARMIN_PASSWORD: ${{ secrets.GARMIN_PASSWORD }}
+        run: python garmin_to_sessions.py --days 1 --sleep-days 0 --enrich-all
+
+      - name: Enregistrer
+        if: always()
+        run: |
+          git config user.name "Garmin Bot"
+          git config user.email "bot@github.com"
+          git add data/sessions.json data/tracks.json 2>/dev/null || true
+          git diff --staged --quiet || git commit -m "fix: randos, traces GPS"
+          git pull --rebase origin main
+          git push
