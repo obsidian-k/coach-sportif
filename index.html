@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=6">
+  <link rel="stylesheet" href="style.css?v=7">
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js"></script>
 </head>
@@ -56,6 +56,10 @@
           <svg width="16" height="16" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6.5" stroke="currentColor" stroke-width="1.5" fill="none"/><circle cx="8" cy="8" r="2.5" stroke="currentColor" stroke-width="1.5" fill="none"/><path d="M8 1.5v2M8 12.5v2M1.5 8h2M12.5 8h2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
           Coach
         </a></li>
+        <li><a href="#performance" class="nav-link" data-view="performance">
+          <svg width="16" height="16" viewBox="0 0 16 16"><path d="M2 14V9M6 14V4M10 14V7M14 14V2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+          Performance
+        </a></li>
         <li><a href="#stats" class="nav-link" data-view="stats">
           <svg width="16" height="16" viewBox="0 0 16 16"><path d="M2 13 L5 8 L8 10 L11 5 L14 7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>
           Stats
@@ -89,6 +93,7 @@
           <h3 id="modal-title">Nouvelle séance</h3>
           <button id="modal-close" class="btn-icon">✕</button>
         </div>
+        <div id="session-detail" class="hidden"></div>
         <form id="session-form">
           <div class="form-grid">
             <div class="form-group">
@@ -107,6 +112,10 @@
                 <option value="corde">⚡ Corde à sauter</option>
                 <option value="boxe">🥊 Boxe (cours)</option>
                 <option value="renfo">💪 Renforcement</option>
+                <option value="hiit">🔥 HIIT</option>
+                <option value="rando">🥾 Randonnée</option>
+                <option value="vtt">🚵 VTT</option>
+                <option value="marche">🚶 Marche</option>
                 <option value="cardio">❤️ Cardio</option>
                 <option value="autre">— Autre —</option>
               </select>
@@ -157,8 +166,10 @@
 
   </div><!-- /#app -->
 
-  <script src="coach-engine.js?v=7"></script>
-  <script src="app.js?v=9"></script>
-  <script src="coach-view.js?v=6"></script>
+  <script src="coach-engine.js?v=5"></script>
+  <script src="app.js?v=11"></script>
+  <script src="session-detail.js?v=1"></script>
+  <script src="performance.js?v=1"></script>
+  <script src="coach-view.js?v=5"></script>
 </body>
 </html>

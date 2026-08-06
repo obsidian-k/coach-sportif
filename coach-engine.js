@@ -21,6 +21,61 @@ const CE_DOW_FR = { 1: 'Lundi', 2: 'Mardi', 3: 'Mercredi', 4: 'Jeudi', 5: 'Vendr
 const ceKm = v => (Math.round(v * 2) / 2).toFixed(1).replace('.0', '').replace('.', ',');
 const cePace = s => `${Math.floor(s / 60)}:${String(Math.round(s % 60)).padStart(2, '0')}`;
 
+/** Durée lisible : « 45 s », « 8 min », « 1 min 30 ». */
+function ceDur(sec) {
+  if (sec < 60) return `${sec} s`;
+  const m = Math.floor(sec / 60), s = sec % 60;
+  return s ? `${m} min ${s}` : `${m} min`;
+}
+
+// ─── Étapes → texte ───────────────────────────────────────────────────────────
+// L'affichage est *dérivé* des étapes structurées : une seule source de vérité
+// pour l'écran et pour la montre, qui ne peuvent donc plus diverger.
+
+const CE_STEP_NAMES = {
+  warmup: 'Échauffement', work: 'Bloc principal', recovery: 'Récupération',
+  cooldown: 'Retour au calme', rest: 'Repos', interval: 'Série',
+};
+
+/** Quantité d'une étape : distance, durée ou répétitions. */
+function ceStepAmount(st) {
+  if (st.distanceKm) return `${ceKm(st.distanceKm)} km`;
+  if (st.reps) return `${st.reps}`;
+  if (st.seconds) return ceDur(st.seconds);
+  return '';
+}
+
+// Libellé par défaut quand l'étape n'en porte pas : « 45 s » tout seul ne dit
+// pas s'il faut souffler ou trottiner.
+const CE_DEFAULT_LABELS = { rest: 'de repos', recovery: 'de récupération' };
+
+/** Une étape élémentaire en toutes lettres. */
+function ceStepText(st) {
+  const label = st.label || CE_DEFAULT_LABELS[st.kind] || '';
+  let out = [ceStepAmount(st), label].filter(Boolean).join(' ');
+  if (st.paceTarget) {
+    // Du plus rapide au plus lent : l'allure se lit en minutes par km, donc
+    // la borne basse est la plus rapide.
+    const [fast, slow] = st.paceTarget;
+    out += ` à ${cePace(fast)}–${cePace(slow)}/km`;
+  }
+  return out;
+}
+
+/** Un bloc { t, d } par étape de premier niveau — le format attendu par la vue. */
+function ceBlocks(steps) {
+  return (steps || []).map(st => {
+    if (st.kind === 'interval') {
+      const inner = st.steps.map(ceStepText).join(' — ');
+      return {
+        t: st.name || `${st.repeat} × série`,
+        d: `${st.repeat} × (${inner})`,
+      };
+    }
+    return { t: st.name || CE_STEP_NAMES[st.kind] || 'Bloc', d: ceStepText(st) };
+  });
+}
+
 // ═══════════════════════════════════════════════════════════
 //  1 — MÉTÉO  (Open-Meteo, gratuit, sans clé, CORS ouvert)
 // ═══════════════════════════════════════════════════════════
@@ -152,7 +207,15 @@ const Weather = {
 // ═══════════════════════════════════════════════════════════
 const CoachEngine = {
   // Pondération d'intensité : 1 min de course ≠ 1 min de vélo tranquille.
-  W: { course_ext: 1.1, course_tapis: 1, boxe: 1.1, sac: 1, corde: 1.15, rameur: 1, velo: .8, renfo: .8, cardio: .9, autre: .8 },
+  W: {
+    course_ext: 1.1, course_tapis: 1, boxe: 1.1, sac: 1, corde: 1.15,
+    rameur: 1, velo: .8, renfo: .8, cardio: .9, hiit: 1.15,
+    // Endurance longue et peu intense : beaucoup de minutes pour une charge
+    // modérée. Sans ces poids bas, une rando de 4 h ferait croire au moteur
+    // à une semaine énorme et il couperait la séance suivante.
+    rando: .5, vtt: .7, marche: .35,
+    autre: .8,
+  },
   RUN: ['course_ext', 'course_tapis'],
 
   points(s) { return (s.duration_min || 30) * (this.W[s.type] || 1); },
@@ -227,279 +290,222 @@ const CoachEngine = {
     if (form.state === 'progression') target = Math.min(run.ref * 1.12, run.ref * form.factor);
     target = Math.max(3, Math.round(target * 2) / 2);
     // Allure visée : plus prudente en reprise
-    const paceAdj = form.state === 'coupure' ? 20 : form.state === 'reprise' ? 10 : form.state === 'progression' ? -5 : 0;
-    const p = run.pace;
-    // Zones calées sur TON allure médiane récente, pas sur une table théorique.
-    const zones = { ef: p + 35, endurance: p + paceAdj, seuil: p - 30, vma: p - 55 };
-    return { form, run, aff, target, paceTarget: zones.endurance, zones, ref };
+    const paceAdj = form.state === 'coupure' ? 25 : form.state === 'reprise' ? 15 : form.state === 'progression' ? -5 : 0;
+    return { form, run, aff, target, paceTarget: run.pace + paceAdj, ref };
   },
 
   /** Alternative intérieure préférée pour la course. */
   indoorRun(aff) { return (aff.course_tapis || 0) >= 1 ? 'course_tapis' : 'rameur'; },
 
-  surf(outdoor, type) { return outdoor ? 'sur route' : (type === 'course_tapis' ? 'sur tapis, pente 1 %' : ''); },
-
-  // ── Séances ────────────────────────────────────────────────────────────────
-  // Règle : on court pour s'échauffer et pour récupérer. Pas de marche.
-  warmRun(z, min = 10) {
-    return { t: 'Échauffement', d: `${min} min de footing à ${cePace(z.ef)}/km, respiration facile, puis 3 lignes droites de 20 s` };
-  },
-  coolRun(min = 6) {
-    return { t: 'Retour au calme', d: `${min} min de footing très lent, puis étirements mollets, ischios, psoas` };
-  },
+  // ── Construction d'une séance ──────────────────────────────────────────────
+  //
+  // Chaque séance est décrite par des ÉTAPES structurées, et la phrase
+  // française en est déduite — jamais l'inverse. C'est ce qui permet
+  // d'envoyer la même séance sur la montre : une chaîne de caractères comme
+  // « 5 × (2 min à 4:20/km — 1 min 30 de récup) » n'est interprétable par
+  // aucun appareil, et oblige à tout mémoriser en courant.
+  //
+  // Étape : { kind, seconds?, distanceKm?, paceTarget?[lo,hi], label?,
+  //           repeat?, steps?[] }
+  // kind ∈ warmup | work | recovery | cooldown | rest | interval
 
   endurance(ctx, outdoor) {
-    const km = ctx.target, z = ctx.zones;
+    const km = ctx.target, p = ctx.paceTarget;
     const type = outdoor ? 'course_ext' : this.indoorRun(ctx.aff);
-    if (type === 'rameur') return this.rameurEndurance(ctx, km);
-    const min = Math.round(km * z.endurance / 60) + 16;
-    const neg = ctx.form.state === 'regulier' || ctx.form.state === 'progression';
+    const min = Math.round(km * p / 60) + 13;
+    const isRow = type === 'rameur';
+
+    const core = isRow
+      ? { kind: 'work', seconds: Math.round(km * p), label: 'rameur en continu, cadence 22-24, respiration régulière' }
+      : {
+          kind: 'work', distanceKm: km, paceTarget: [p - 15, p + 15],
+          label: outdoor ? 'en continu' : 'en continu — tapis, pente 1 %',
+        };
+
     return {
-      type, outdoor, role: 'endurance',
-      title: outdoor ? 'Sortie longue' : 'Sortie longue sur tapis', focus: 'Endurance',
-      duration: min, distance: km, pace: z.endurance,
-      blocks: [
-        this.warmRun(z, 10),
-        { t: 'Bloc principal', d: `${ceKm(km)} km en continu à ${cePace(z.endurance)}/km ${this.surf(outdoor, type)}${neg ? ` — les 2 derniers km à ${cePace(z.endurance - 15)}/km` : ''}` },
-        this.coolRun(6),
+      type, outdoor,
+      title: outdoor ? 'Endurance extérieure' : (isRow ? 'Endurance rameur' : 'Endurance tapis'),
+      focus: 'Endurance', duration: min,
+      distance: isRow ? null : km, pace: isRow ? null : p,
+      steps: [
+        { kind: 'warmup', seconds: 480, label: 'marche rapide puis footing très souple' },
+        core,
+        { kind: 'cooldown', seconds: 300, label: 'marche + étirements mollets / ischios' },
       ],
     };
   },
 
-  footing(ctx, outdoor) {
-    const km = Math.max(3, Math.round(ctx.target * 0.7 * 2) / 2), z = ctx.zones;
+  fractionne(ctx, outdoor) {
+    const p = ctx.paceTarget, reps = ctx.form.state === 'progression' ? 6 : 5;
+    const fast = p - 45;
     const type = outdoor ? 'course_ext' : this.indoorRun(ctx.aff);
-    if (type === 'rameur') return this.rameurEndurance(ctx, km);
     return {
-      type, outdoor, role: 'footing',
-      title: outdoor ? 'Footing souple' : 'Footing sur tapis', focus: 'Aérobie',
-      duration: Math.round(km * z.ef / 60) + 10, distance: km, pace: z.ef,
-      blocks: [
-        { t: 'Bloc principal', d: `${ceKm(km)} km à ${cePace(z.ef)}/km — tu dois pouvoir parler en courant` },
-        { t: 'Lignes droites', d: "5 × 20 s d'accélération progressive, 40 s de footing entre chaque" },
-        { t: 'Gainage', d: '2 × (planche 45 s + gainage latéral 30 s par côté)' },
+      type, outdoor, title: outdoor ? 'Fractionné extérieur' : 'Fractionné tapis',
+      focus: 'Intensité', duration: 20 + reps * 4, distance: null, pace: null,
+      steps: [
+        { kind: 'warmup', seconds: 720, label: 'footing souple + 4 lignes droites' },
+        {
+          kind: 'interval', repeat: reps, steps: [
+            { kind: 'work', seconds: 120, paceTarget: [fast - 10, fast + 10] },
+            { kind: 'recovery', seconds: 90, label: 'marche' },
+          ],
+        },
+        { kind: 'cooldown', seconds: 480, label: 'footing très lent' },
       ],
     };
   },
 
-  intensite(ctx, outdoor) {
-    const z = ctx.zones;
-    const type = outdoor ? 'course_ext' : this.indoorRun(ctx.aff);
-    if (type === 'rameur') return this.rameurIntervalles(ctx);
-    const prog = ctx.form.state === 'progression';
-    // Alternance seuil / VMA d'une semaine sur l'autre : deux stimulus différents.
-    const seuil = Math.floor(ceDiff(ctx.ref, '2026-01-05') / 7) % 2 === 0;
-    const core = seuil
-      ? { title: 'Séance au seuil', d: `${prog ? 3 : 2} × 8 min à ${cePace(z.seuil)}/km, récupération 3 min de footing à ${cePace(z.ef)}/km`, min: prog ? 55 : 47 }
-      : { title: 'Fractionné court', d: `2 séries de ${prog ? 8 : 6} × (45 s à ${cePace(z.vma)}/km — 45 s de footing lent), 3 min de footing entre les séries`, min: prog ? 52 : 45 };
-    return {
-      type, outdoor, role: 'intensite',
-      title: core.title + (outdoor ? '' : ' sur tapis'), focus: 'Intensité',
-      duration: core.min, distance: null, pace: null,
-      blocks: [this.warmRun(z, 12), { t: 'Bloc principal', d: core.d }, this.coolRun(8)],
-    };
-  },
-
-  rameurEndurance(ctx, km) {
-    const min = Math.round(km * ctx.zones.ef / 60);
-    return {
-      type: 'rameur', outdoor: false, role: 'endurance', title: 'Endurance rameur', focus: 'Endurance',
-      duration: min + 12, distance: null, pace: null,
-      blocks: [
-        { t: 'Échauffement', d: '8 min cadence 20, appuis longs' },
-        { t: 'Bloc principal', d: `${min} min en continu, cadence 22-24, split régulier` },
-        { t: 'Retour au calme', d: '4 min cadence 18 + étirements dorsaux' },
-      ],
-    };
-  },
-
-  rameurIntervalles(ctx) {
-    const n = ctx.form.state === 'progression' ? 6 : 4;
-    return {
-      type: 'rameur', outdoor: false, role: 'intensite', title: 'Rameur — intervalles', focus: 'Intensité',
-      duration: 12 + n * 4, distance: null, pace: null,
-      blocks: [
-        { t: 'Échauffement', d: '8 min cadence 20' },
-        { t: 'Bloc principal', d: `${n} × (500 m à fond, 2 min cadence 18 entre chaque) — note ton split moyen` },
-        { t: 'Retour au calme', d: '4 min cadence 18' },
-      ],
-    };
-  },
-
-  boxe(ctx, forceRounds) {
+  boxe(ctx) {
     const lvl = ctx.form.state === 'coupure' ? 0 : ctx.form.state === 'reprise' ? 1 : ctx.form.state === 'progression' ? 3 : 2;
-    const rounds = forceRounds || 4 + lvl, corde = 3 + Math.floor(lvl / 2);
+    const rounds = 4 + lvl, corde = 3 + Math.floor(lvl / 2);
+    const style = lvl >= 2 ? 'combos 1-2-3-2, travail tête et corps' : 'jab-cross, garde haute, pieds mobiles';
     return {
-      type: 'sac', outdoor: false, role: 'mixte', title: 'Boxe — sac & corde', focus: lvl <= 1 ? 'Technique' : 'Intensité', lvl,
-      duration: 18 + rounds * 4, distance: null, pace: null, rounds,
-      blocks: [
-        { t: 'Échauffement', d: `${corde} rounds de corde (2 min / 45 s) puis 1 round de shadow boxing` },
-        { t: 'Bloc principal', d: `${rounds} rounds de sac (3 min / 1 min) — ${lvl >= 2 ? 'combos 1-2-3-2, alternance tête et corps, 15 s à fond en fin de round' : 'jab-cross, garde haute, déplacements latéraux'}` },
-        { t: 'Gainage', d: `${2 + lvl} × (planche 45 s + gainage latéral 30 s par côté + 20 relevés de bassin)` },
+      type: 'sac', outdoor: false, title: 'Boxe — sac & corde', focus: 'Intensité',
+      duration: 20 + rounds * 4, distance: null, pace: null, rounds,
+      steps: [
+        {
+          kind: 'interval', repeat: corde, name: 'Échauffement — corde', steps: [
+            { kind: 'work', seconds: 120, label: 'corde à sauter' },
+            { kind: 'rest', seconds: 45 },
+          ],
+        },
+        {
+          kind: 'interval', repeat: rounds, name: 'Rounds de sac', steps: [
+            { kind: 'work', seconds: 180, label: `sac — ${style}` },
+            { kind: 'rest', seconds: 60 },
+          ],
+        },
+        {
+          kind: 'interval', repeat: 2 + lvl, name: 'Gainage', steps: [
+            { kind: 'work', seconds: 45, label: 'planche' },
+            { kind: 'work', seconds: 60, label: 'gainage latéral, 30 s par côté' },
+          ],
+        },
       ],
     };
   },
 
-  mixte(ctx, forceMin) {
-    if ((ctx.aff.sac || 0) + (ctx.aff.boxe || 0) >= (ctx.aff.rameur || 0)) return this.boxe(ctx);
-    const min = forceMin || (ctx.form.state === 'coupure' ? 16 : ctx.form.state === 'progression' ? 26 : 20);
+  mixte(ctx) {
+    const useRameur = (ctx.aff.rameur || 0) >= (ctx.aff.velo || 0);
+    const min = ctx.form.state === 'coupure' ? 16 : ctx.form.state === 'progression' ? 25 : 20;
     return {
-      type: 'rameur', outdoor: false, role: 'mixte', title: 'Rameur & renforcement', focus: 'Mixte',
-      duration: min + 20, distance: null, pace: null,
-      blocks: [
-        { t: 'Cardio', d: `${min} min de rameur, cadence 22-24, en aisance respiratoire` },
-        { t: 'Renforcement', d: '3 tours : 12 pompes · 20 squats · 10 fentes par jambe · planche 45 s' },
-        { t: 'Mobilité', d: '5 min hanches et chevilles' },
+      type: useRameur ? 'rameur' : 'velo', outdoor: false,
+      title: useRameur ? 'Rameur & renforcement' : 'Vélo & renforcement',
+      focus: 'Mixte', duration: min + 20, distance: null, pace: null,
+      steps: [
+        {
+          kind: 'work', seconds: min * 60, name: 'Cardio',
+          label: `${useRameur ? 'rameur, cadence 22-24' : 'vélo, résistance modérée'} en aisance respiratoire`,
+        },
+        {
+          kind: 'interval', repeat: 3, name: 'Renforcement', steps: [
+            { kind: 'work', reps: 12, label: 'pompes' },
+            { kind: 'work', reps: 20, label: 'squats' },
+            { kind: 'work', seconds: 45, label: 'planche' },
+            { kind: 'work', reps: 10, label: 'fentes par jambe' },
+          ],
+        },
+        { kind: 'cooldown', seconds: 300, label: 'mobilité hanches et épaules' },
       ],
     };
   },
 
-  recup(ctx, forceMin) {
-    const run = Math.max(12, forceMin || 25);
+  recup(ctx) {
     return {
-      type: 'course_ext', outdoor: true, role: 'recup', title: 'Décrassage', focus: 'Récupération',
-      duration: run + 10, distance: null, pace: null,
-      blocks: [
-        { t: 'Bloc principal', d: `${run} min de footing à ${cePace(ctx.zones.ef + 20)}/km — volontairement lent, c'est le but` },
-        { t: 'Mobilité', d: '10 min : mollets, ischios, psoas, épaules, tenus 40 s chacun' },
+      type: 'velo', outdoor: false, title: 'Récupération active', focus: 'Récup',
+      duration: 35, distance: null, pace: null,
+      steps: [
+        {
+          kind: 'work', seconds: 1500, name: 'Cardio léger',
+          label: 'vélo ou marche rapide — tu dois pouvoir tenir une conversation',
+        },
+        {
+          kind: 'cooldown', seconds: 600,
+          label: 'étirements longs : mollets, ischios, psoas, épaules',
+        },
       ],
     };
-  },
-
-  /** Réduit vraiment une séance d'appoint (blocs régénérés), au lieu de mentir sur la durée. */
-  shrink(s, targetMin, ctx) {
-    if (s.role === 'recup') return this.recup(ctx, Math.max(12, targetMin - 10));
-    if (s.type === 'sac') {
-      const r = Math.max(3, Math.floor((targetMin - 18) / 4));
-      return r < s.rounds ? this.boxe(ctx, r) : null;
-    }
-    if (s.role === 'mixte') return this.mixte(ctx, Math.max(10, targetMin - 20));
-    if (s.role === 'footing') {
-      const km = Math.max(3, Math.round((targetMin - 10) * 60 / ctx.zones.ef * 2) / 2);
-      if (km >= s.distance) return null;
-      const n = this.footing(ctx, s.outdoor);
-      n.distance = km; n.duration = Math.round(km * ctx.zones.ef / 60) + 10;
-      n.blocks[0].d = `${ceKm(km)} km à ${cePace(ctx.zones.ef)}/km — tu dois pouvoir parler en courant`;
-      return n;
-    }
-    return null;
-  },
-
-  // ── Répartition des rôles sur les jours choisis ────────────────────────────
-  ROLES: {
-    1: ['endurance'],
-    2: ['endurance', 'intensite'],
-    3: ['endurance', 'intensite', 'mixte'],
-    4: ['endurance', 'intensite', 'mixte', 'footing'],
-    5: ['endurance', 'intensite', 'mixte', 'footing', 'recup'],
-    6: ['endurance', 'intensite', 'mixte', 'footing', 'recup', 'recup'],
-    7: ['endurance', 'intensite', 'mixte', 'footing', 'recup', 'recup', 'recup'],
-  },
-
-  roleList(n, state) {
-    let r = (this.ROLES[Math.min(n, 7)] || ['endurance']).slice(0, n);
-    if (state === 'surcharge') r = r.map((x, i) => (i === 0 ? 'footing' : 'recup'));
-    else if (state === 'coupure') r = r.map((x, i) => (i === 0 ? 'endurance' : i === 1 ? 'mixte' : 'recup'));
-    else if (state === 'reprise') r = r.map((x, i) => (x === 'intensite' ? 'mixte' : i >= 3 ? 'recup' : x));
-    return r;
-  },
-
-  build(role, ctx, outdoor) {
-    if (role === 'endurance') return this.endurance(ctx, outdoor);
-    if (role === 'intensite') return this.intensite(ctx, outdoor);
-    if (role === 'footing')   return this.footing(ctx, outdoor);
-    if (role === 'recup')     return this.recup(ctx);
-    return this.mixte(ctx);
   },
 
   /**
-   * Les séances de la semaine, sur les jours que TU as cochés.
-   * override = { [date]: 'out' | 'in' } pour forcer la modalité à la main.
+   * Les deux séances de la semaine de télétravail.
+   * `override` = { [date]: 'out' | 'in' } pour forcer manuellement la modalité.
    */
   week(sessions, forecast, settings, refDate, override = {}) {
     const ref = refDate || ceISO(new Date());
     const ctx = this.context(sessions, ref);
-    ctx.ref = ref;
     const dows = (settings.coach_days && settings.coach_days.length ? settings.coach_days : [1, 5]);
-    const dates = [...new Set(dows.map(d => ceNextDow(ref, d)))].sort();
-    if (!dates.length) return { ref, ctx, days: [], proposed: 0, cap: 0, capped: false };
+    const dates = dows.map(d => ceNextDow(ref, d)).sort();
 
     const days = dates.map(date => {
       const w = forecast ? Weather.forDate(forecast, date) : null;
       const forced = override[date];
-      const outdoorOK = forced ? forced === 'out' : (w ? w.outdoor : true);
-      return {
-        date, dow: ceDate(date).getDay() || 7, weather: w, weatherOutdoor: outdoorOK, forced: !!forced,
-        score: (w ? w.best.score : 50) + (outdoorOK ? 15 : 0),
-      };
+      const outdoor = forced ? forced === 'out' : (w ? w.outdoor : true);
+      return { date, dow: ceDate(date).getDay() || 7, weather: w, outdoor, forced: !!forced };
     });
 
-    // 1 — les séances dures partent sur les jours les plus cléments
-    const roles = this.roleList(days.length, ctx.form.state);
-    const isHard = r => r === 'endurance' || r === 'intensite';
-    const byScore = days.map((d, i) => i).sort((a, b) => days[b].score - days[a].score);
-    const assign = new Array(days.length).fill(null);
-    roles.filter(isHard).forEach((r, k) => { assign[byScore[k]] = r; });
-    const rest = roles.filter(r => !isHard(r));
-    days.forEach((d, i) => { if (!assign[i]) assign[i] = rest.shift() || 'recup'; });
-
-    // 2 — jamais deux séances dures collées
-    for (let i = 1; i < days.length; i++) {
-      if (isHard(assign[i]) && isHard(assign[i - 1]) && ceDiff(days[i].date, days[i - 1].date) === 1) {
-        assign[i] = ctx.form.state === 'progression' ? 'footing' : 'recup';
-      }
-    }
+    // Le jour le plus clément prend la séance de course ; l'autre prend l'intensité/mixte.
+    const scored = days.map(d => (d.weather ? d.weather.best.score : 50) + (d.outdoor ? 15 : 0));
+    const runIdx = scored[0] >= scored[1] ? 0 : 1;
 
     days.forEach((d, i) => {
-      const s = this.build(assign[i], ctx, d.weatherOutdoor);
-      d.role = assign[i];
-      d.outdoor = s.outdoor;
+      const isRun = i === runIdx;
+      let s;
+      if (ctx.form.state === 'surcharge' && !isRun) s = this.recup(ctx);
+      else if (isRun) {
+        s = (ctx.form.state === 'progression' && d.outdoor) ? this.fractionne(ctx, d.outdoor) : this.endurance(ctx, d.outdoor);
+      } else {
+        s = d.outdoor && (ctx.aff.course_ext || 0) > 0 && ctx.form.state === 'progression'
+          ? this.boxe(ctx) : ((ctx.aff.sac || 0) + (ctx.aff.boxe || 0) >= (ctx.aff.rameur || 0) ? this.boxe(ctx) : this.mixte(ctx));
+      }
+      // La prose affichée est dérivée des étapes, à un seul endroit.
+      s.blocks = ceBlocks(s.steps);
+      d.weatherOutdoor = d.outdoor;
+      d.outdoor = s.outdoor;          // le badge suit la séance, pas juste le ciel
       d.session = s;
+      d.why = this.why(ctx, d, s, isRun);
     });
 
-    // 3 — plafond de volume, en minutes réelles, réellement appliqué
+    // Garde-fou volume — minutes réelles vs minutes réelles.
+    // En coupure/reprise le volume est déjà bridé en amont (factor + decay) :
+    // on garde un plancher confortable pour ne pas alerter sur deux séances courtes.
     const floor = ['coupure', 'reprise'].includes(ctx.form.state) ? 100 : 80;
     const cap = Math.max(floor, Math.round((ctx.form.minPerWeek || 0) * 1.3 + 20));
     let proposed = days.reduce((t, d) => t + d.session.duration, 0);
-    // On ne rabote jamais la séance clé : seules les séances d'appoint absorbent le surplus,
-    // et on RÉGÉNÈRE la séance pour que les blocs collent à la durée annoncée.
-    ctx.cap = cap;
-    for (const role of ['recup', 'footing', 'mixte']) {
-      if (proposed <= cap) break;
-      for (let i = days.length - 1; i >= 0 && proposed > cap; i--) {
-        const d = days[i];
-        if (d.role !== role) continue;
-        const target = Math.max(20, d.session.duration - (proposed - cap));
-        const smaller = this.shrink(d.session, target, ctx);
-        if (!smaller || smaller.duration >= d.session.duration) continue;
-        proposed -= d.session.duration - smaller.duration;
-        smaller.trimmed = true;
-        d.session = smaller;
-        d.outdoor = smaller.outdoor;
-      }
-    }
-    days.forEach(d => { d.why = this.why(ctx, d, d.session, d.role); });
+    let capped = false;
 
-    return { ref, ctx, days, proposed, cap, capped: proposed > cap + 10 };
+    if (proposed > cap) {
+      // On raccourcit la séance secondaire (jamais la sortie course) plutôt que d'alerter.
+      const other = days.find((d, i) => i !== runIdx);
+      if (other) {
+        const room = Math.max(20, other.session.duration - (proposed - cap));
+        if (room < other.session.duration) {
+          other.session.duration = Math.round(room);
+          other.session.trimmed = true;
+          other.why.push(`Volume hebdomadaire ramené à ${cap} min (1,3 × tes ${ctx.form.minPerWeek} min/semaine des 4 dernières semaines) — cette séance est raccourcie, garde les rounds les plus propres.`);
+        }
+      }
+      proposed = days.reduce((t, d) => t + d.session.duration, 0);
+      capped = proposed > cap;
+    }
+
+    return { ref, ctx, days, proposed, cap, capped };
   },
 
-  why(ctx, day, s, role) {
-    const out = [], f = ctx.form;
-    if (f.state === 'coupure') out.push(`${f.daysSince} jours sans séance — volume à ${Math.round(Math.min(ctx.run.decay, f.factor) * 100)} % de ta référence, pas de fractionné cette semaine.`);
-    else if (f.state === 'reprise') out.push(`${f.daysSince} jours sans séance — on redémarre sous ta référence, le fractionné revient la semaine prochaine.`);
-    else if (f.state === 'surcharge') out.push(`Charge des 7 derniers jours à ${Math.round(f.ratio * 100)} % de ta moyenne — semaine allégée, c'est volontaire.`);
-    else if (f.state === 'progression') out.push(`${f.perWeek} séances/semaine tenues sur 4 semaines — on monte de 6 à 10 %.`);
-    else out.push(`Charge stable (${f.acute} pts sur 7 j vs ${f.chronic} pts/sem.) — on maintient.`);
+  why(ctx, day, s, isRun) {
+    const out = [];
+    const f = ctx.form;
+    if (f.state === 'coupure') out.push(`${f.daysSince} jours sans séance — volume ramené à ${Math.round(Math.min(ctx.run.decay, f.factor) * 100)} % de ta référence.`);
+    else if (f.state === 'reprise') out.push(`${f.daysSince} jours sans séance — on redémarre sous ta référence, pas dessus.`);
+    else if (f.state === 'surcharge') out.push(`Charge des 7 derniers jours à ${Math.round(f.ratio * 100)} % de ta moyenne — on allège.`);
+    else if (f.state === 'progression') out.push(`${f.perWeek} séances/semaine tenues sur 4 semaines — on peut monter de 6 à 10 %.`);
+    else out.push(`Charge stable (${f.acute} pts sur 7 j vs ${f.chronic} pts/sem. en moyenne) — on maintient.`);
 
-    if (s.distance) out.push(`Référence course : ${ceKm(ctx.run.ref)} km (2 meilleures sorties des 60 derniers jours) → cible ${ceKm(s.distance)} km à ${cePace(s.pace)}/km.`);
-    if (role === 'intensite') out.push(`Allures calées sur ta médiane récente (${cePace(ctx.run.pace)}/km) : seuil ${cePace(ctx.zones.seuil)}, vite ${cePace(ctx.zones.vma)}.`);
-    if (s.trimmed) out.push(`Séance réduite pour tenir le plafond hebdomadaire de ${ctx.cap} min.`);
-    if (s.optional) out.push("Séance optionnelle : à faire seulement si la semaine s'est bien passée.");
-
+    if (isRun && s.distance) out.push(`Référence course : ${ceKm(ctx.run.ref)} km (2 meilleures sorties des 60 derniers jours) → cible ${ceKm(s.distance)} km.`);
     if (!day.weather) out.push('Météo indisponible — modalité par défaut, à ajuster.');
     else if (day.forced) out.push(`Modalité forcée à la main (${day.outdoor ? 'extérieur' : 'salle'}) — ${day.weather.why}.`);
     else if (day.outdoor) out.push(`Extérieur : ${day.weather.why}.`);
-    else if (day.weatherOutdoor) out.push(`Séance d'intérieur par nature — ${day.weather.why}, la sortie est placée un autre jour.`);
+    else if (day.weatherOutdoor) out.push(`Séance d'intérieur par nature — ${day.weather.why}, garde la sortie pour l'autre jour.`);
     else out.push(`Repli en salle : ${day.weather.why}.`);
     return out;
   },

@@ -22,48 +22,10 @@ except ImportError:
 SESSIONS_OUT = os.path.join(os.path.dirname(__file__), "data", "sessions.json")
 SLEEP_OUT    = os.path.join(os.path.dirname(__file__), "data", "sleep.json")
 
-TYPE_MAP = {
-    "running":           "course_ext",
-    "treadmill_running": "course_tapis",
-    "indoor_rowing":     "rameur",
-    "rowing":            "rameur",
-    "cycling":           "velo",
-    "indoor_cycling":    "velo",
-    "boxing":            "boxe",
-    "cardio_training":   "cardio",
-    "strength_training": "renfo",
-    "jump_rope":         "corde",
-    "fitness_equipment": "cardio",
-    "other":             "autre",
-}
-
-LABEL_MAP = {
-    "course_ext":   "Course ext.",
-    "course_tapis": "Course tapis",
-    "rameur":       "Rameur",
-    "velo":         "Vélo apprt.",
-    "boxe":         "Boxe (cours)",
-    "sac":          "Sac de frappe",
-    "corde":        "Corde à sauter",
-    "renfo":        "Renforcement",
-    "cardio":       "Cardio",
-    "autre":        "Autre",
-}
-
-
-def map_type(garmin_type: str, activity_name: str) -> str:
-    gt = (garmin_type or "").lower().replace(" ", "_")
-    name = (activity_name or "").lower()
-    # Affiner depuis le nom
-    if "corde" in name or "jump rope" in name:
-        return "corde"
-    if "sac" in name or "punching" in name:
-        return "sac"
-    if "boxe" in name or "boxing" in name:
-        return "boxe"
-    if "tapis" in name or "treadmill" in name:
-        return "course_tapis"
-    return TYPE_MAP.get(gt, "autre")
+from session_types import (
+    TYPE_MAP, LABEL_MAP, GPS_TYPES, STRENGTH_TYPES, map_type,
+)
+from garmin_enrich import enrich, MAX_CALLS_PER_RUN
 
 
 def sec_to_min(s):
@@ -83,9 +45,9 @@ def garmin_activity_to_session(act: dict) -> dict:
 
     act_type = act.get("activityType", {}).get("typeKey", "other")
     act_name = act.get("activityName", "")
-    s_type = map_type(act_type, act_name)
-
     dur_sec = act.get("duration") or act.get("movingDuration")
+    s_type = map_type(act_type, act_name, sec_to_min(dur_sec))
+
     dist_m = act.get("distance")
     avg_speed = act.get("averageSpeed")
     avg_hr = act.get("averageHR")
@@ -192,6 +154,9 @@ def main():
     parser.add_argument("--days", type=int, default=60, help="Nombre de jours à récupérer (défaut: 60)")
     parser.add_argument("--all", action="store_true", help="Récupérer toutes les activités depuis 2018")
     parser.add_argument("--sleep-days", type=int, default=30, help="Jours de sommeil à récupérer (défaut: 30 ; grande valeur = backfill historique)")
+    parser.add_argument("--no-enrich", action="store_true", help="Sauter les séries de muscu et les traces GPS")
+    parser.add_argument("--enrich-max", type=int, default=MAX_CALLS_PER_RUN,
+                        help=f"Plafond d'appels d'enrichissement par run (défaut: {MAX_CALLS_PER_RUN})")
     args = parser.parse_args()
 
     # Credentials — env vars first (GitHub Actions), fallback to .env file (local)
@@ -257,6 +222,17 @@ def main():
 
     # Tri par date décroissante
     existing.sort(key=lambda s: s["date"], reverse=True)
+
+    # ── Enrichissement : séries de muscu + traces GPS ─────────────────────────
+    # Un appel API par activité : on ne traite que ce qui manque, avec un
+    # plafond par run. Ce qui déborde sera repris au run suivant.
+    if not args.no_enrich:
+        print("🔎 Enrichissement (séries de muscu + traces GPS)…")
+        n_str, n_gps, exhausted = enrich(
+            api, existing, GPS_TYPES, STRENGTH_TYPES, max_calls=args.enrich_max,
+        )
+        print(f"   💪 {n_str} séance(s) de muscu détaillée(s) · 🗺️  {n_gps} trace(s) récupérée(s)"
+              + (" · budget atteint, suite au prochain run" if exhausted else ""))
 
     with open(SESSIONS_OUT, "w", encoding="utf-8") as f:
         json.dump(existing, f, ensure_ascii=False, indent=2)

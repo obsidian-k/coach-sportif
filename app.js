@@ -46,9 +46,37 @@ const TYPES = {
   corde:        { label: 'Corde à sauter',  icon: '⚡', color: '#a855f7' },
   boxe:         { label: 'Boxe (cours)',    icon: '🥊', color: '#dc2626' },
   renfo:        { label: 'Renforcement',    icon: '💪', color: '#4ade80' },
+  hiit:         { label: 'HIIT',            icon: '🔥', color: '#f97316' },
+  rando:        { label: 'Randonnée',       icon: '🥾', color: '#84cc16' },
+  vtt:          { label: 'VTT',             icon: '🚵', color: '#eab308' },
+  marche:       { label: 'Marche',          icon: '🚶', color: '#a3a3a3' },
   cardio:       { label: 'Cardio',          icon: '❤️', color: '#22d3ee' },
   autre:        { label: 'Autre',           icon: '⚡', color: '#6b7280' },
 };
+
+// Séances qui se déroulent sur un parcours : on affiche le tracé + le dénivelé.
+const TRACE_TYPES = ['rando', 'vtt', 'marche', 'course_ext'];
+const isTraceType = t => TRACE_TYPES.includes(t);
+
+// Types pour lesquels l'allure est une métrique pertinente. Sur une rando ou
+// un VTT, c'est la vitesse ou le dénivelé qui parlent.
+const PACE_TYPES = ['course_ext', 'course_tapis'];
+
+/**
+ * Allure d'une séance, en secondes par kilomètre.
+ *
+ * Toujours dérivée de la distance et de la durée, jamais lue telle quelle :
+ * la colonne « allure » des exports CSV s'est révélée peu fiable (jusqu'à
+ * 2:33/km enregistré pour une sortie réellement courue à 7:22/km). Le calcul
+ * redonne exactement la valeur de l'API Garmin sur les données saines.
+ */
+function sessionPace(s) {
+  if (!PACE_TYPES.includes(s.type)) return null;
+  if (s.distance_km > 0 && s.duration_min > 0) {
+    return Math.round(s.duration_min * 60 / s.distance_km);
+  }
+  return s.pace_sec_km || null;
+}
 
 function typeInfo(t) { return TYPES[t] || TYPES.autre; }
 function typeColor(t) { return typeInfo(t).color; }
@@ -351,21 +379,22 @@ function parseDurationGarmin(raw) {
   return null;
 }
 
-function parsePaceStr(raw) {
-  if (!raw || raw === '--') return null;
-  const p = raw.split(':');
-  return p.length === 2 ? parseInt(p[0])*60 + parseInt(p[1]) : null;
-}
-
 function mapBoxeType(dur) { return (dur && dur >= 50) ? 'boxe' : 'sac'; }
 
 function mapGarminType(gType, title, dur) {
   const t = (gType||'').toLowerCase(), ti = (title||'').toLowerCase();
-  if (t === 'boxe') return mapBoxeType(dur);
+  const both = `${t} ${ti}`;
+  if (t === 'boxe' || both.includes('boxe') || both.includes('boxing')) return mapBoxeType(dur);
+  if (both.includes('sac de frappe') || both.includes('punching')) return 'sac';
   if (t === 'cardio' && (ti.includes('jump rope') || ti.includes('corde'))) return 'corde';
-  if (t.includes('rameur')) return 'rameur';
+  if (both.includes('rando') || both.includes('hiking') || both.includes('trek')) return 'rando';
+  if (both.includes('vtt') || both.includes('mountain bik') || both.includes('gravel')) return 'vtt';
+  if (both.includes('marche') || both.includes('walking')) return 'marche';
+  if (both.includes('hiit')) return 'hiit';
+  if (both.includes('muscu') || both.includes('renfo') || both.includes('musculation')) return 'renfo';
+  if (t.includes('rameur') || both.includes('aviron')) return 'rameur';
   if (t === 'course à pied sur tapis roulant' || ti.includes('tapis')) return 'course_tapis';
-  if (t === 'course à pied') return 'course_ext';
+  if (t === 'course à pied' || both.includes('course')) return 'course_ext';
   if (t.includes('vélo') || t.includes('velo') || t.includes('cyclisme')) return 'velo';
   if (t === 'cardio') return 'cardio';
   return 'autre';
@@ -392,7 +421,9 @@ function parseGarminCSV(content) {
       hr_avg: r[7] && r[7] !== '--' ? parseInt(r[7]) : null,
       hr_max: r[8] && r[8] !== '--' ? parseInt(r[8]) : null,
       distance_km: dist && dist !== '--' ? parseFloat(dist.replace(',','.')) || null : null,
-      pace_sec_km: parsePaceStr(r[13]?.trim()),
+      // On ignore la colonne « allure » du CSV (peu fiable) : sessionPace la
+      // recalcule depuis la distance et la durée au moment de l'affichage.
+      pace_sec_km: null,
       elevation_m: r[14] && r[14] !== '--' ? parseInt(r[14]) || null : null,
       rounds: null, notes: ''
     });
@@ -411,7 +442,12 @@ function parseStravaDate(raw) {
 }
 
 function mapStravaType(t) {
-  const map = { 'Course à pied':'course_ext','Vélo':'velo','Randonnée':'course_ext','Marche':'autre','Aviron':'rameur','Elliptique':'velo','Entraînement':'renfo','Crossfit':'renfo','Natation':'autre' };
+  const map = {
+    'Course à pied':'course_ext', 'Vélo':'velo', 'Randonnée':'rando',
+    'Marche':'marche', 'VTT':'vtt', 'Aviron':'rameur', 'Elliptique':'velo',
+    'Entraînement':'renfo', 'Musculation':'renfo', 'Crossfit':'hiit',
+    'Natation':'autre',
+  };
   return map[t] || 'autre';
 }
 
@@ -494,7 +530,8 @@ function navigate(view) {
   destroyCharts();
   const main = document.getElementById('main');
   main.innerHTML = '<div class="loader">Chargement…</div>';
-  ({ dashboard, seances, coach: coachView, stats, recup: recupView, import: importView }[view] || dashboard)(main);
+  ({ dashboard, seances, coach: coachView, performance, stats,
+     recup: recupView, import: importView }[view] || dashboard)(main);
 }
 window.addEventListener('hashchange', () => navigate(location.hash.slice(1) || 'dashboard'));
 
@@ -686,11 +723,14 @@ function seances(main) {
     <div id="sessions-list"></div>
   `;
 
-  // Filtres type
+  // Filtres type — dérivés de TYPES, et limités aux types réellement pratiqués
+  // (inutile d'afficher un filtre « VTT » si tu n'as jamais fait de VTT).
+  const used = new Set(DB.getSessions().map(s => s.type));
   const filterDefs = [
-    {key:'all',label:'Tout'},{key:'course_ext',label:'🏃 Course ext.'},{key:'course_tapis',label:'🏃 Tapis'},
-    {key:'rameur',label:'🚣 Rameur'},{key:'velo',label:'🚴 Vélo'},{key:'sac',label:'🥊 Sac'},
-    {key:'corde',label:'⚡ Corde'},{key:'boxe',label:'🥊 Boxe'},{key:'renfo',label:'💪 Renfo'},
+    { key: 'all', label: 'Tout' },
+    ...Object.keys(TYPES)
+      .filter(k => used.has(k))
+      .map(k => ({ key: k, label: `${typeIcon(k)} ${typeLabel(k)}` })),
   ];
   const filtersEl = document.getElementById('filters');
   filterDefs.forEach(f => {
@@ -812,8 +852,8 @@ function stats(main) {
   const data = computeStats(sessions);
   const totalH = Math.round(data.totals.minutes / 60);
   const firstYear = data.firstDate ? data.firstDate.slice(0, 4) : '—';
-  const bestPace = data.courseSessions.filter(s => s.pace_sec_km).length
-    ? Math.min(...data.courseSessions.filter(s => s.pace_sec_km).map(s => s.pace_sec_km)) : null;
+  const validPaces = data.courseSessions.map(sessionPace).filter(Boolean);
+  const bestPace = validPaces.length ? Math.min(...validPaces) : null;
   const avgPerWeek = data.totals.sessions > 0
     ? (data.totals.sessions / Math.max(1, Object.keys(data.byWeek).length)).toFixed(1) : '—';
 
@@ -857,11 +897,15 @@ function stats(main) {
       </div>
     </div>
 
+    <div id="strength-block"></div>
+
     <div class="annual-card">
       <div class="annual-header">Performance par année</div>
       <div class="year-grid" id="year-grid" style="padding:16px 20px 20px"></div>
     </div>
   `;
+
+  renderStrengthProgress(sessions, document.getElementById('strength-block'));
 
   // Chart 1 — séances par mois (12 derniers mois, simple)
   const allMonths = Object.keys(data.byMonth).sort();
@@ -1210,6 +1254,8 @@ function openAddModal(defaults={}) {
   if (defaults.duration) document.getElementById('f-duration').value = Math.round(defaults.duration);
   if (defaults.distance) document.getElementById('f-distance').value = defaults.distance;
   toggleFormFields();
+  const detail = document.getElementById('session-detail');
+  detail.innerHTML = ''; detail.classList.add('hidden');
   document.getElementById('modal-overlay').classList.remove('hidden');
 }
 
@@ -1228,6 +1274,7 @@ function openEditModal(session) {
   document.getElementById('f-hr-max').value = session.hr_max || '';
   document.getElementById('f-notes').value = session.notes || '';
   toggleFormFields();
+  renderSessionDetail(session, document.getElementById('session-detail'));
   document.getElementById('modal-overlay').classList.remove('hidden');
 }
 
@@ -1239,10 +1286,11 @@ function closeModal() { document.getElementById('modal-overlay').classList.add('
 
 function toggleFormFields() {
   const type = document.getElementById('f-type').value;
-  const isCardio = ['course_ext','course_tapis'].includes(type);
-  const isCombat = ['sac','corde','boxe','renfo'].includes(type);
-  document.getElementById('fg-distance').style.display = isCardio?'':'none';
-  document.getElementById('fg-pace').style.display = isCardio?'':'none';
+  const hasDistance = ['course_ext','course_tapis','rando','vtt','marche','velo'].includes(type);
+  const hasPace     = ['course_ext','course_tapis'].includes(type);
+  const isCombat    = ['sac','corde','boxe','renfo','hiit'].includes(type);
+  document.getElementById('fg-distance').style.display = hasDistance?'':'none';
+  document.getElementById('fg-pace').style.display = hasPace?'':'none';
   document.getElementById('fg-rounds').style.display = isCombat?'':'none';
 }
 
