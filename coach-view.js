@@ -37,10 +37,131 @@ async function coachView(main) {
     </div>
     ${coachStateHtml(ctx)}
     <div id="coach-days"><div class="loader">Lecture de la météo…</div></div>
+    <div id="coach-push"></div>
   `;
   await ensureForecast();
   buildPlan();
   renderCoachDays();
+  renderPushButton();
+}
+
+/* ─── Envoi sur la montre ────────────────────────────────────────────────────
+   Le navigateur ne peut pas parler à Garmin : il demande à GitHub Actions de
+   le faire, via /api/push-workout. Les identifiants Garmin restent là-bas.
+   ------------------------------------------------------------------------- */
+
+// Séances que la montre ne sait pas guider (répétitions à compter).
+const PUSH_UNSUPPORTED = ['renfo'];
+
+let pushPollTimer = null;
+
+function renderPushButton(state = 'idle', message = '') {
+  const el = document.getElementById('coach-push');
+  if (!el || !coachPlan) return;
+
+  const sendable = coachPlan.days.filter(d => !PUSH_UNSUPPORTED.includes(d.session.type));
+  if (!sendable.length) {
+    el.innerHTML = `<div class="push-box"><div class="push-note">
+      Les séances de cette semaine sont en répétitions — une montre ne sait pas
+      guider « 12 pompes ». Elles restent ici.</div></div>`;
+    return;
+  }
+
+  const labels = {
+    idle:    'Envoyer sur ma montre',
+    sending: 'Envoi en cours…',
+    waiting: 'Préparation de la séance…',
+    done:    'Séance sur ta montre ✓',
+    error:   'Réessayer',
+  };
+  const busy = state === 'sending' || state === 'waiting';
+
+  el.innerHTML = `
+    <div class="push-box ${state}">
+      <div class="push-main">
+        <button class="btn-gold btn-sm" id="btn-push" ${busy ? 'disabled' : ''}>
+          ${busy ? '<span class="push-spin"></span>' : ''}${labels[state]}
+        </button>
+        <div class="push-note">
+          ${state === 'done'
+            ? 'Sur la montre : <b>Entraînement → Entraînements du jour</b>. Elle annonce chaque bloc et vibre aux transitions.'
+            : `${sendable.length} séance${sendable.length > 1 ? 's' : ''} à envoyer · planifiée${sendable.length > 1 ? 's' : ''} au bon jour`}
+        </div>
+      </div>
+      ${message ? `<div class="push-msg">${message}</div>` : ''}
+    </div>`;
+
+  const btn = document.getElementById('btn-push');
+  if (btn && !busy) btn.onclick = pushToWatch;
+}
+
+async function pushToWatch() {
+  renderPushButton('sending');
+  try {
+    const r = await fetch('/api/push-workout', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ date: today() }),
+    });
+    const data = await r.json().catch(() => ({}));
+
+    if (!r.ok || !data.ok) {
+      renderPushButton('error', pushErrorText(r.status, data));
+      return;
+    }
+    // GitHub ne renvoie pas d'identifiant de run : on interroge l'état.
+    renderPushButton('waiting');
+    pollPushStatus(Date.now());
+  } catch (e) {
+    renderPushButton('error',
+      `Impossible de joindre le serveur (${e.message}). Vérifie ta connexion.`);
+  }
+}
+
+function pushErrorText(status, data) {
+  if (status === 401) {
+    return 'Session expirée — recharge la page pour te reconnecter.';
+  }
+  if (data.error === 'token_sans_droit_actions') {
+    return "Le jeton GitHub n'a pas le droit de lancer un workflow. "
+         + "Sur GitHub : <i>Settings → Developer settings → Personal access tokens</i>, "
+         + "et donne la permission <b>Actions : Read and write</b> au jeton.";
+  }
+  if (data.error === 'server_misconfig_no_token') {
+    return 'Le jeton GitHub est absent côté serveur (variable GITHUB_TOKEN sur Cloudflare).';
+  }
+  return data.message || data.detail || 'Échec du lancement. Réessaie dans un instant.';
+}
+
+/** Suit l'exécution côté GitHub. L'envoi prend ~1 min (installation + Garmin). */
+function pollPushStatus(startedAt, tries = 0) {
+  clearTimeout(pushPollTimer);
+  // Au-delà de 3 min, on rend la main plutôt que de tourner indéfiniment.
+  if (tries > 36) {
+    renderPushButton('error',
+      "L'envoi prend plus longtemps que prévu. Va voir l'onglet <i>Actions</i> "
+      + 'sur GitHub pour savoir où ça en est.');
+    return;
+  }
+  pushPollTimer = setTimeout(async () => {
+    try {
+      const r = await fetch('/api/push-workout');
+      const d = await r.json();
+      if (d.ok && d.status === 'completed') {
+        if (d.conclusion === 'success') {
+          renderPushButton('done');
+        } else {
+          renderPushButton('error',
+            `L'envoi a échoué côté Garmin. <a href="${d.url}" target="_blank" rel="noopener">Voir le détail</a>. `
+            + 'Souvent Garmin bloque temporairement : réessaie dans une heure.');
+        }
+        return;
+      }
+      pollPushStatus(startedAt, tries + 1);
+    } catch {
+      pollPushStatus(startedAt, tries + 1);
+    }
+  }, 5000);
 }
 
 function coachStateHtml(ctx) {

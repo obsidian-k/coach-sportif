@@ -84,22 +84,54 @@ function typeLabel(t) { return typeInfo(t).label; }
 function typeIcon(t)  { return typeInfo(t).icon; }
 
 // Nettoie les titres Garmin verbeux ("Noyal-sur-Vilaine Course à pied" → label propre)
+// Types où le lieu EST l'information : une rando à Fontainebleau et une rando
+// à Liffré n'ont rien à voir, alors que toutes tes sorties course partent du
+// même endroit. On ne retire donc le nom de commune que hors de ces types.
+const PLACE_MATTERS = ['rando', 'vtt', 'marche'];
+
 function cleanTitle(s) {
-  if (!s.title || s.source !== 'garmin') return s.title || typeLabel(s.type);
+  // Les titres saisis à la main sont voulus : on n'y touche pas.
+  if (!s.title || (s.source !== 'garmin' && s.source !== 'strava')) {
+    return s.title || typeLabel(s.type);
+  }
   const t = s.title.trim();
-  // Patterns Garmin à virer : "Ville Course à pied", "Ville Running", etc.
-  const garminNoise = [
-    /^[\w\-]+-sur-[\w\-]+\s+/i,   // "Noyal-sur-Vilaine "
-    /^[\w\-]+-[\w\-]+-[\w\-]+\s+/i, // triple-composé
-    /^[A-Z][a-zÀ-ÿ]+-[A-Z][a-zÀ-ÿ]+\s+/,  // "Saint-Grégoire "
-  ];
   let clean = t;
-  for (const re of garminNoise) clean = clean.replace(re, '');
-  // Si après nettoyage c'est un titre Garmin générique → remplace par label
+
+  if (!PLACE_MATTERS.includes(s.type)) {
+    // Noms de communes en tête : "Noyal-sur-Vilaine Course à pied"
+    const placeNoise = [
+      /^[\w\-]+-sur-[\w\-]+\s+/i,           // "Noyal-sur-Vilaine "
+      /^[\w\-]+-[\w\-]+-[\w\-]+\s+/i,       // triple-composé
+      /^[A-Z][a-zÀ-ÿ]+-[A-Z][a-zÀ-ÿ]+\s+/,  // "Saint-Grégoire "
+    ];
+    for (const re of placeNoise) clean = clean.replace(re, '');
+  }
+
+  // Moments de la journée : « Course à pied dans l'après-midi » → « Course à pied »
+  clean = clean.replace(
+    /\s+(dans l'|en |du |le |de la )?(matin(ée)?|midi|après-midi|soir(ée)?|nuit)$/i, '');
+
+  // Noms de cours ou de salle qui ne disent rien sur la séance elle-même
+  // (« F3b KickBoxing » est un créneau, pas un contenu) : le libellé du type
+  // est plus parlant. Le titre d'origine reste dans la donnée.
+  const roomCodes = [
+    /^f\d+[a-z]?\s+/i,          // « F3b KickBoxing », « F12 Cardio »
+    /^s\d+\s+/i,                // « S2 Renforcement »
+    /^(cours|séance|entra[îi]nement)\s+(du|de|le|la)?\s*/i,
+  ];
+  for (const re of roomCodes) clean = clean.replace(re, '');
+
+  // Si après nettoyage c'est un titre générique → remplace par le libellé
   const generic = ['Course à pied', 'Running', 'Cycling', 'Rowing', 'Indoor Rowing',
-    'Jump Rope', 'Treadmill Running', 'Strength Training', 'Cardio'];
+    'Jump Rope', 'Treadmill Running', 'Strength Training', 'Cardio',
+    'Course à pied sur tapis roulant', "Rameur d'intérieur", 'Vélo d\'intérieur',
+    'Vélo', 'Cyclisme', 'Aviron', 'Aviron en salle', 'Corde à sauter',
+    'Kickboxing', 'Kick boxing', 'Boxing', 'Boxe', 'Hiking', 'Walking',
+    'Randonnée', 'Marche à pied', 'Marche', 'Musculation', 'Renforcement',
+    'HIIT', 'Entraînement', 'Activité', 'Course', 'Sortie', 'Sortie VTT',
+    'Sortie vélo', 'Footing'];
   if (generic.some(g => clean.toLowerCase() === g.toLowerCase())) return typeLabel(s.type);
-  return clean || typeLabel(s.type);
+  return clean.trim() || typeLabel(s.type);
 }
 
 // ─── Utilitaires ──────────────────────────────────────────────────────────────
