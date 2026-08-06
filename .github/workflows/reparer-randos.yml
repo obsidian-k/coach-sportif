@@ -1,4 +1,4 @@
-name: Reparer les randos
+name: Tout reparer
 
 on:
   workflow_dispatch:
@@ -11,6 +11,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
 
       - uses: actions/setup-python@v6
         with:
@@ -18,27 +20,41 @@ jobs:
 
       - run: pip install garminconnect python-dotenv
 
-      - name: Reclasser les seances
+      - name: 1 - Recuperer les seances manquantes
+        continue-on-error: true
+        env:
+          GARMIN_EMAIL: ${{ secrets.GARMIN_EMAIL }}
+          GARMIN_PASSWORD: ${{ secrets.GARMIN_PASSWORD }}
+        run: python garmin_to_sessions.py --days 90 --sleep-days 30 --no-enrich
+
+      - name: 2 - Reclasser les seances
+        continue-on-error: true
         run: python reclass_sessions.py --apply
 
-      - name: Rattacher les identifiants Garmin
+      - name: 3 - Rattacher les identifiants Garmin
+        continue-on-error: true
         env:
           GARMIN_EMAIL: ${{ secrets.GARMIN_EMAIL }}
           GARMIN_PASSWORD: ${{ secrets.GARMIN_PASSWORD }}
         run: python relink_garmin_ids.py --apply
 
-      - name: Telecharger les traces GPS
+      - name: 4 - Telecharger les traces GPS
+        continue-on-error: true
         env:
           GARMIN_EMAIL: ${{ secrets.GARMIN_EMAIL }}
           GARMIN_PASSWORD: ${{ secrets.GARMIN_PASSWORD }}
         run: python garmin_to_sessions.py --days 1 --sleep-days 0 --enrich-all
 
-      - name: Enregistrer
+      - name: 5 - Enregistrer
         if: always()
         run: |
           git config user.name "Garmin Bot"
           git config user.email "bot@github.com"
-          git add data/sessions.json data/tracks.json 2>/dev/null || true
-          git diff --staged --quiet || git commit -m "fix: randos, traces GPS"
-          git pull --rebase origin main
-          git push
+          git add -A data/ || true
+          if git diff --staged --quiet; then
+            echo "Rien a enregistrer."
+            exit 0
+          fi
+          git commit -m "fix: seances restaurees, randos et traces GPS"
+          git push || (git pull --rebase origin main && git push)
+          echo "Enregistre."
