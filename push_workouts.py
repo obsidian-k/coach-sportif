@@ -91,6 +91,7 @@ def main():
     ap = argparse.ArgumentParser(description="Envoie les séances du coach sur la montre")
     ap.add_argument("--apply", action="store_true", help="Envoie réellement (sinon : aperçu)")
     ap.add_argument("--date", help="Date de référence (défaut : aujourd'hui)")
+    ap.add_argument("--only", help="N'envoyer que la séance de cette date (AAAA-MM-JJ)")
     ap.add_argument("--no-weather", action="store_true", help="Ignorer la météo")
     args = ap.parse_args()
 
@@ -102,8 +103,16 @@ def main():
 
     print(f"📅 Semaine du {week['ref']} — forme : {week['form']['label']}\n")
 
+    days = week["days"]
+    if args.only:
+        days = [d for d in days if d["date"] == args.only]
+        if not days:
+            print(f"Aucune séance prévue le {args.only} — rien à envoyer.")
+            return
+        print(f"➡️  Envoi de la seule séance du {args.only}\n")
+
     planned = []
-    for day in week["days"]:
+    for day in days:
         w = build_workout(day["session"], name=workout_name(day))
         print(f"── {day['date']} ──")
         if not w:

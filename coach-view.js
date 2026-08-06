@@ -35,131 +35,169 @@ async function coachView(main) {
       <div class="page-sub">Séances proposées les jours de télétravail · ${st.place || 'Noyal-sur-Vilaine'}
         <button class="link-btn" onclick="coachSetPlace()">changer de lieu</button></div>
     </div>
+    ${coachDayPickerHtml(st)}
     ${coachStateHtml(ctx)}
     <div id="coach-days"><div class="loader">Lecture de la météo…</div></div>
-    <div id="coach-push"></div>
   `;
+  bindDayPicker();
   await ensureForecast();
   buildPlan();
   renderCoachDays();
-  renderPushButton();
+  renderPushButtons();
+}
+
+/* ─── Choix des jours d'entraînement ───────────────────────────────────────── */
+
+const DOW_SHORT = { 1: 'Lun', 2: 'Mar', 3: 'Mer', 4: 'Jeu', 5: 'Ven', 6: 'Sam', 7: 'Dim' };
+
+function coachDayPickerHtml(st) {
+  const active = st.coach_days || [2, 5, 7];
+  const btns = [1, 2, 3, 4, 5, 6, 7].map(d =>
+    `<button class="dp-day${active.includes(d) ? ' on' : ''}" data-dow="${d}">${DOW_SHORT[d]}</button>`
+  ).join('');
+  return `
+    <div class="day-picker">
+      <span class="dp-lbl">Mes jours d'entraînement</span>
+      <div class="dp-days">${btns}</div>
+      <span class="dp-count" id="dp-count">${active.length} séance${active.length > 1 ? 's' : ''} / semaine</span>
+    </div>`;
+}
+
+function bindDayPicker() {
+  document.querySelectorAll('.dp-day').forEach(btn => {
+    btn.onclick = () => {
+      const dow = +btn.dataset.dow;
+      const st = DB.getSettings();
+      let days = [...(st.coach_days || [])];
+      days = days.includes(dow) ? days.filter(d => d !== dow) : [...days, dow];
+      // Au moins un jour, sinon le coach n'a plus rien à proposer.
+      if (!days.length) { toast('Garde au moins un jour', 'warn'); return; }
+      days.sort((a, b) => a - b);
+      DB.saveSettings({ ...st, coach_days: days });
+      coachView(document.getElementById('main'));
+    };
+  });
 }
 
 /* ─── Envoi sur la montre ────────────────────────────────────────────────────
-   Le navigateur ne peut pas parler à Garmin : il demande à GitHub Actions de
-   le faire, via /api/push-workout. Les identifiants Garmin restent là-bas.
+   Un bouton PAR SÉANCE : tu choisis celle que tu veux sur ta montre, quand
+   tu veux. Le navigateur ne peut pas parler à Garmin, il demande à GitHub
+   Actions de le faire — les identifiants Garmin restent là-bas.
    ------------------------------------------------------------------------- */
 
 // Séances que la montre ne sait pas guider (répétitions à compter).
 const PUSH_UNSUPPORTED = ['renfo'];
 
-let pushPollTimer = null;
+// État d'envoi par date : idle | sending | waiting | done | error
+const pushState = {};
+const pushTimers = {};
 
-function renderPushButton(state = 'idle', message = '') {
-  const el = document.getElementById('coach-push');
+function renderPushButtons() {
+  if (!coachPlan) return;
+  coachPlan.days.forEach(d => renderPushButton(d.date));
+}
+
+function renderPushButton(date, message = '') {
+  const el = document.getElementById(`push-${date}`);
   if (!el || !coachPlan) return;
+  const day = coachPlan.days.find(x => x.date === date);
+  if (!day) return;
 
-  const sendable = coachPlan.days.filter(d => !PUSH_UNSUPPORTED.includes(d.session.type));
-  if (!sendable.length) {
-    el.innerHTML = `<div class="push-box"><div class="push-note">
-      Les séances de cette semaine sont en répétitions — une montre ne sait pas
-      guider « 12 pompes ». Elles restent ici.</div></div>`;
+  if (PUSH_UNSUPPORTED.includes(day.session.type)) {
+    el.innerHTML = `<div class="push-note">Séance en répétitions : une montre ne
+      sait pas guider « 12 pompes ». Elle reste ici.</div>`;
     return;
   }
 
+  const state = pushState[date] || 'idle';
   const labels = {
     idle:    'Envoyer sur ma montre',
-    sending: 'Envoi en cours…',
-    waiting: 'Préparation de la séance…',
-    done:    'Séance sur ta montre ✓',
+    sending: 'Envoi…',
+    waiting: 'Préparation…',
+    done:    'Sur ta montre ✓',
     error:   'Réessayer',
   };
   const busy = state === 'sending' || state === 'waiting';
 
+  el.className = `cday-push ${state}`;
   el.innerHTML = `
-    <div class="push-box ${state}">
-      <div class="push-main">
-        <button class="btn-gold btn-sm" id="btn-push" ${busy ? 'disabled' : ''}>
-          ${busy ? '<span class="push-spin"></span>' : ''}${labels[state]}
-        </button>
-        <div class="push-note">
-          ${state === 'done'
-            ? 'Sur la montre : <b>Entraînement → Entraînements du jour</b>. Elle annonce chaque bloc et vibre aux transitions.'
-            : `${sendable.length} séance${sendable.length > 1 ? 's' : ''} à envoyer · planifiée${sendable.length > 1 ? 's' : ''} au bon jour`}
-        </div>
-      </div>
-      ${message ? `<div class="push-msg">${message}</div>` : ''}
-    </div>`;
+    <button class="btn-watch" data-date="${date}" ${busy ? 'disabled' : ''}>
+      ${busy ? '<span class="push-spin"></span>' : '<span class="watch-ico">⌚</span>'}
+      ${labels[state]}
+    </button>
+    ${state === 'done'
+      ? '<div class="push-note">Sur la montre : <b>Entraînement → Entraînements du jour</b></div>'
+      : ''}
+    ${message ? `<div class="push-msg">${message}</div>` : ''}`;
 
-  const btn = document.getElementById('btn-push');
-  if (btn && !busy) btn.onclick = pushToWatch;
+  const btn = el.querySelector('.btn-watch');
+  if (btn && !busy) btn.onclick = () => pushToWatch(date);
 }
 
-async function pushToWatch() {
-  renderPushButton('sending');
+async function pushToWatch(date) {
+  pushState[date] = 'sending';
+  renderPushButton(date);
   try {
     const r = await fetch('/api/push-workout', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ date: today() }),
+      body: JSON.stringify({ date: today(), only: date }),
     });
     const data = await r.json().catch(() => ({}));
-
     if (!r.ok || !data.ok) {
-      renderPushButton('error', pushErrorText(r.status, data));
+      pushState[date] = 'error';
+      renderPushButton(date, pushErrorText(r.status, data));
       return;
     }
-    // GitHub ne renvoie pas d'identifiant de run : on interroge l'état.
-    renderPushButton('waiting');
-    pollPushStatus(Date.now());
+    pushState[date] = 'waiting';
+    renderPushButton(date);
+    pollPushStatus(date);
   } catch (e) {
-    renderPushButton('error',
-      `Impossible de joindre le serveur (${e.message}). Vérifie ta connexion.`);
+    pushState[date] = 'error';
+    renderPushButton(date, `Impossible de joindre le serveur (${e.message}).`);
   }
 }
 
 function pushErrorText(status, data) {
-  if (status === 401) {
-    return 'Session expirée — recharge la page pour te reconnecter.';
-  }
+  if (status === 401) return 'Session expirée, recharge la page.';
   if (data.error === 'token_sans_droit_actions') {
     return "Le jeton GitHub n'a pas le droit de lancer un workflow. "
          + "Sur GitHub : <i>Settings → Developer settings → Personal access tokens</i>, "
-         + "et donne la permission <b>Actions : Read and write</b> au jeton.";
+         + "puis passe <b>Actions</b> sur <b>Read and write</b>.";
   }
   if (data.error === 'server_misconfig_no_token') {
-    return 'Le jeton GitHub est absent côté serveur (variable GITHUB_TOKEN sur Cloudflare).';
+    return 'Jeton GitHub absent côté serveur (variable GITHUB_TOKEN sur Cloudflare).';
   }
   return data.message || data.detail || 'Échec du lancement. Réessaie dans un instant.';
 }
 
-/** Suit l'exécution côté GitHub. L'envoi prend ~1 min (installation + Garmin). */
-function pollPushStatus(startedAt, tries = 0) {
-  clearTimeout(pushPollTimer);
-  // Au-delà de 3 min, on rend la main plutôt que de tourner indéfiniment.
-  if (tries > 36) {
-    renderPushButton('error',
-      "L'envoi prend plus longtemps que prévu. Va voir l'onglet <i>Actions</i> "
-      + 'sur GitHub pour savoir où ça en est.');
+/** Suit l'exécution côté GitHub. L'envoi prend ~1 min. */
+function pollPushStatus(date, tries = 0) {
+  clearTimeout(pushTimers[date]);
+  if (tries > 36) {                       // ~3 min
+    pushState[date] = 'error';
+    renderPushButton(date, "Plus long que prévu. Va voir l'onglet <i>Actions</i> sur GitHub.");
     return;
   }
-  pushPollTimer = setTimeout(async () => {
+  pushTimers[date] = setTimeout(async () => {
     try {
       const r = await fetch('/api/push-workout');
       const d = await r.json();
       if (d.ok && d.status === 'completed') {
         if (d.conclusion === 'success') {
-          renderPushButton('done');
+          pushState[date] = 'done';
+          renderPushButton(date);
         } else {
-          renderPushButton('error',
-            `L'envoi a échoué côté Garmin. <a href="${d.url}" target="_blank" rel="noopener">Voir le détail</a>. `
+          pushState[date] = 'error';
+          renderPushButton(date,
+            `Échec côté Garmin. <a href="${d.url}" target="_blank" rel="noopener">Voir le détail</a>. `
             + 'Souvent Garmin bloque temporairement : réessaie dans une heure.');
         }
         return;
       }
-      pollPushStatus(startedAt, tries + 1);
+      pollPushStatus(date, tries + 1);
     } catch {
-      pollPushStatus(startedAt, tries + 1);
+      pollPushStatus(date, tries + 1);
     }
   }, 5000);
 }
@@ -182,7 +220,7 @@ function coachStateHtml(ctx) {
       <div class="cs-metrics">
         <div class="cs-m"><span class="cs-m-val">${f.acute}</span><span class="cs-m-key">charge 7 j</span></div>
         <div class="cs-m"><span class="cs-m-val">${f.chronic}</span><span class="cs-m-key">moy./sem. sur 4 sem.</span></div>
-        <div class="cs-m"><span class="cs-m-val">${f.ratio || '—'}</span><span class="cs-m-key">ratio aigu / chronique</span></div>
+        <div class="cs-m"><span class="cs-m-val">${f.ratio ?? '·'}</span><span class="cs-m-key">ratio aigu / chronique</span></div>
         <div class="cs-m"><span class="cs-m-val">${f.perWeek}</span><span class="cs-m-key">séances / sem.</span></div>
       </div>
       <div class="cs-chart">
@@ -196,10 +234,10 @@ function renderCoachDays() {
   const el = document.getElementById('coach-days');
   if (!el || !coachPlan) return;
   const warn = coachWeatherErr
-    ? `<div class="adaptive-hint"><b>Météo indisponible</b>${coachWeatherErr} — modalités par défaut, bascule-les à la main.</div>`
+    ? `<div class="adaptive-hint"><b>Météo indisponible</b>${coachWeatherErr}. Modalités par défaut, bascule-les à la main.</div>`
     : '';
   const capped = coachPlan.capped
-    ? `<div class="adaptive-hint"><b>Semaine dense</b>${coachPlan.proposed} min proposées, au-dessus du plafond de ${coachPlan.cap} min issu de tes 4 dernières semaines — coupe une des deux séances si la fatigue est là.</div>`
+    ? `<div class="adaptive-hint"><b>Semaine dense</b>${coachPlan.proposed} min proposées, au-dessus du plafond de ${coachPlan.cap} min issu de tes 4 dernières semaines : coupe une séance si la fatigue est là.</div>`
     : '';
   el.innerHTML = warn + '<div class="coach-days">' + coachPlan.days.map(coachDayHtml).join('') + '</div>' + capped;
 }
@@ -249,6 +287,7 @@ function coachDayHtml(d) {
         <button class="btn-gold btn-sm" onclick="coachLog('${d.date}')">Enregistrer cette séance</button>
         <button class="btn-ghost btn-sm" onclick="coachToggle('${d.date}')">${d.outdoor ? 'Basculer en salle' : 'Basculer dehors'}</button>
       </footer>
+      <div class="cday-push" id="push-${d.date}"></div>
     </article>`;
 }
 
@@ -291,9 +330,9 @@ async function renderDashCoach() {
       <a class="prog-item" href="#coach">
         <div class="prog-icon" style="color:${typeColor(s.type)}">${typeIcon(s.type)}</div>
         <div class="prog-body">
-          <div class="prog-name">${CE_DOW_FR[d.dow]} ${formatDateShort(d.date)} — ${s.title}</div>
+          <div class="prog-name">${CE_DOW_FR[d.dow]} ${formatDateShort(d.date)} · ${s.title}</div>
           <div class="prog-desc">${bits}</div>
-          <div class="prog-weather">${d.outdoor ? 'Extérieur' : 'En salle'} — ${d.weather ? d.weather.why : 'météo indisponible'}</div>
+          <div class="prog-weather">${d.outdoor ? 'Extérieur' : 'En salle'} · ${d.weather ? d.weather.why : 'météo indisponible'}</div>
         </div>
         <div class="prog-check">›</div>
       </a>`;

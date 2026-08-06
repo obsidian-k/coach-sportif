@@ -206,7 +206,7 @@ function renderPerfBody(sessions, el) {
       <div class="perf-trend ${cls}">
         <span class="pf-arrow">${arrow}</span>
         <div>
-          <div class="pf-verb">${verb} — ${m.label.toLowerCase()}</div>
+          <div class="pf-verb">${verb} · ${m.label.toLowerCase()}</div>
           <div class="pf-detail">
             ${m.fmt(trend.from)} → ${m.fmt(trend.to)}
             ${trend.flat ? '' : `· ${trend.pct.toFixed(0)} % sur tes ${trend.n} dernières séances`}
@@ -248,7 +248,7 @@ function renderPerfBody(sessions, el) {
     </div>
 
     <div class="chart-wrap">
-      <div class="chart-lbl">${m.label} — ${typeLabel(type)}
+      <div class="chart-lbl">${m.label} · ${typeLabel(type)}
         <span class="chart-hint">points : séances · ligne : moyenne sur 5 séances</span></div>
       <div class="chart-container" style="height:300px"><canvas id="chart-perf"></canvas></div>
     </div>`;

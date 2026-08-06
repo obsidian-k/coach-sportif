@@ -1,10 +1,5 @@
 {
   "program_start_date": "2026-04-06",
   "user_name": "Sébastien",
-  "week_target": 2,
-  "coach_days": [
-    1,
-    3,
-    5
-  ]
+  "week_target": 2
 }

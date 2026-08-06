@@ -84,6 +84,50 @@ function typeLabel(t) { return typeInfo(t).label; }
 function typeIcon(t)  { return typeInfo(t).icon; }
 
 // Nettoie les titres Garmin verbeux ("Noyal-sur-Vilaine Course à pied" → label propre)
+// ─── Classement des séances ───────────────────────────────────────────────────
+// Les randos, VTT, marches et HIIT importés avant l'existence de ces types
+// sont enregistrés en « autre ». On les reclasse **à l'affichage**, à partir
+// du nom de l'activité : rien à réparer, rien à lancer, ça marche dès
+// l'ouverture de la page. Le script reclass_sessions.py fait la même chose
+// de façon permanente dans le fichier, mais n'est plus un prérequis.
+//
+// Doit rester aligné sur NAME_RULES dans session_types.py (même ordre).
+const NAME_RULES = [
+  [['corde', 'jump rope'],                    'corde'],
+  [['sac de frappe', 'punching'],             'sac'],
+  [['boxe', 'boxing'],                        'boxe'],
+  [['rando', 'hiking', 'trek'],               'rando'],
+  [['vtt', 'mountain bik', 'gravel'],         'vtt'],
+  [['marche', 'walking'],                     'marche'],
+  [['hiit'],                                  'hiit'],
+  [['muscu', 'renfo', 'strength', 'pompes'],  'renfo'],
+  [['rameur', 'rowing', 'aviron'],            'rameur'],
+  [['tapis', 'treadmill'],                    'course_tapis'],
+  [['course', 'running', 'footing'],          'course_ext'],
+  [['vélo', 'velo', 'cycling', 'bike'],       'velo'],
+];
+
+// Intérieur / extérieur ne se devine pas au nom : le type d'origine, qui
+// vient du capteur, fait autorité sur cette paire.
+const TRUSTED_PAIR = ['course_ext', 'course_tapis'];
+
+// Un cours de boxe dure ~1 h ; en dessous c'est du sac à la maison.
+const BOXE_COURS_MIN = 50;
+
+function normalizeType(s) {
+  const current = s.type || 'autre';
+  const name = (s.title || '').toLowerCase();
+  for (const [needles, target] of NAME_RULES) {
+    if (!needles.some(n => name.includes(n))) continue;
+    let t = target;
+    if (t === 'boxe' && s.duration_min && s.duration_min < BOXE_COURS_MIN) t = 'sac';
+    if (t === current) return current;
+    if (TRUSTED_PAIR.includes(current) && TRUSTED_PAIR.includes(t)) return current;
+    return t;
+  }
+  return current;
+}
+
 // Types où le lieu EST l'information : une rando à Fontainebleau et une rando
 // à Liffré n'ont rien à voir, alors que toutes tes sorties course partent du
 // même endroit. On ne retire donc le nom de commune que hors de ces types.
@@ -208,6 +252,9 @@ const DB = {
 
   getSessions() {
     const data = JSON.parse(localStorage.getItem(this.SK) || '[]');
+    // Point de passage unique : tout ce qui lit les séances voit des types
+    // corrects, sans qu'aucun script de réparation ait besoin d'être lancé.
+    data.forEach(s => { s.type = normalizeType(s); });
     return data.sort((a, b) => b.date.localeCompare(a.date) || String(b.id).localeCompare(String(a.id)));
   },
   saveSessions(arr) { localStorage.setItem(this.SK, JSON.stringify(arr)); },
@@ -232,12 +279,16 @@ const DB = {
   },
 
   getSettings() {
-    return JSON.parse(localStorage.getItem(this.CK) || JSON.stringify({
+    const s = JSON.parse(localStorage.getItem(this.CK) || '{}');
+    // Valeurs par défaut fusionnées : un réglage ajouté après coup ne casse
+    // pas les préférences déjà enregistrées.
+    return {
       user_name: 'Sébastien',
-      coach_days: [1, 5],                 // télétravail : lundi & vendredi
+      coach_days: [2, 5, 7],              // mardi, vendredi, dimanche
       place: 'Noyal-sur-Vilaine',
       lat: 48.1206, lon: -1.5117,
-    }));
+      ...s,
+    };
   },
   saveSettings(data) { localStorage.setItem(this.CK, JSON.stringify(data)); },
 
@@ -562,7 +613,7 @@ function navigate(view) {
   destroyCharts();
   const main = document.getElementById('main');
   main.innerHTML = '<div class="loader">Chargement…</div>';
-  ({ dashboard, seances, coach: coachView, performance, stats,
+  ({ dashboard, seances, coach: coachView, randos, performance, stats,
      recup: recupView, import: importView }[view] || dashboard)(main);
 }
 window.addEventListener('hashchange', () => navigate(location.hash.slice(1) || 'dashboard'));

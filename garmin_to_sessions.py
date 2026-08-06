@@ -157,6 +157,8 @@ def main():
     parser.add_argument("--no-enrich", action="store_true", help="Sauter les séries de muscu et les traces GPS")
     parser.add_argument("--enrich-max", type=int, default=MAX_CALLS_PER_RUN,
                         help=f"Plafond d'appels d'enrichissement par run (défaut: {MAX_CALLS_PER_RUN})")
+    parser.add_argument("--enrich-all", action="store_true",
+                        help="Récupérer TOUTES les traces manquantes en une fois (rattrapage initial)")
     args = parser.parse_args()
 
     # Credentials — env vars first (GitHub Actions), fallback to .env file (local)
@@ -227,9 +229,13 @@ def main():
     # Un appel API par activité : on ne traite que ce qui manque, avec un
     # plafond par run. Ce qui déborde sera repris au run suivant.
     if not args.no_enrich:
-        print("🔎 Enrichissement (séries de muscu + traces GPS)…")
+        # --enrich-all : rattrapage initial, on descend tout d'un coup. Le
+        # throttle interne suffit à ne pas déclencher de 429 sur un seul run.
+        budget = 10_000 if args.enrich_all else args.enrich_max
+        print(f"🔎 Enrichissement (séries de muscu + traces GPS)"
+              f"{' — rattrapage complet' if args.enrich_all else ''}…")
         n_str, n_gps, exhausted = enrich(
-            api, existing, GPS_TYPES, STRENGTH_TYPES, max_calls=args.enrich_max,
+            api, existing, GPS_TYPES, STRENGTH_TYPES, max_calls=budget,
         )
         print(f"   💪 {n_str} séance(s) de muscu détaillée(s) · 🗺️  {n_gps} trace(s) récupérée(s)"
               + (" · budget atteint, suite au prochain run" if exhausted else ""))

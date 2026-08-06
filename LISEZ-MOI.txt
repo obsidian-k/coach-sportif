@@ -2,8 +2,7 @@ SAUVEGARDE — Coach Sportif
 ==========================
 
 Contenu :
-- Code de l'appli : app.js, coach-engine.js, coach-view.js, index.html, style.css, functions/, .github/, garmin_to_sessions.py
-- Météo : Open-Meteo (gratuit, sans clé, appelé depuis le navigateur) — aucun secret à gérer.
+- Code de l'appli : app.js, index.html, style.css, functions/, .github/, garmin_to_sessions.py
 - Tes données : data/sessions.json (séances), data/sleep.json (sommeil), data/settings.json (réglages)
 - Assets : Tools/ (avatar, images)
 

@@ -49,20 +49,21 @@ export async function onRequestPost(context) {
   if (bad) return bad;
 
   const token = context.env.GITHUB_TOKEN;
-  let date = '';
+  // `date` = semaine de référence ; `only` = n'envoyer que cette séance-là.
+  const isDate = v => typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v);
+  let date = '', only = '';
   try {
     const body = await context.request.json();
-    if (typeof body?.date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(body.date)) {
-      date = body.date;
-    }
+    if (isDate(body?.date)) date = body.date;
+    if (isDate(body?.only)) only = body.only;
   } catch {
-    // Pas de corps : on prend la date du jour côté workflow.
+    // Pas de corps : le workflow prendra la date du jour.
   }
 
   try {
     const r = await gh(token, `actions/workflows/${WORKFLOW}/dispatches`, {
       method: 'POST',
-      body: JSON.stringify({ ref: BRANCH, inputs: { date } }),
+      body: JSON.stringify({ ref: BRANCH, inputs: { date, only } }),
     });
 
     // 204 = accepté. GitHub ne renvoie pas d'identifiant de run ici : le suivi

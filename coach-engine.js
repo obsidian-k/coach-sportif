@@ -66,7 +66,7 @@ function ceStepText(st) {
 function ceBlocks(steps) {
   return (steps || []).map(st => {
     if (st.kind === 'interval') {
-      const inner = st.steps.map(ceStepText).join(' — ');
+      const inner = st.steps.map(ceStepText).join(' · ');
       return {
         t: st.name || `${st.repeat} × série`,
         d: `${st.repeat} × (${inner})`,
@@ -319,7 +319,7 @@ const CoachEngine = {
       ? { kind: 'work', seconds: Math.round(km * p), label: 'rameur en continu, cadence 22-24, respiration régulière' }
       : {
           kind: 'work', distanceKm: km, paceTarget: [p - 15, p + 15],
-          label: outdoor ? 'en continu' : 'en continu — tapis, pente 1 %',
+          label: outdoor ? 'en continu' : 'en continu, tapis pente 1 %',
         };
 
     return {
@@ -360,18 +360,18 @@ const CoachEngine = {
     const rounds = 4 + lvl, corde = 3 + Math.floor(lvl / 2);
     const style = lvl >= 2 ? 'combos 1-2-3-2, travail tête et corps' : 'jab-cross, garde haute, pieds mobiles';
     return {
-      type: 'sac', outdoor: false, title: 'Boxe — sac & corde', focus: 'Intensité',
+      type: 'sac', outdoor: false, title: 'Boxe : sac & corde', focus: 'Intensité',
       duration: 20 + rounds * 4, distance: null, pace: null, rounds,
       steps: [
         {
-          kind: 'interval', repeat: corde, name: 'Échauffement — corde', steps: [
+          kind: 'interval', repeat: corde, name: 'Échauffement corde', steps: [
             { kind: 'work', seconds: 120, label: 'corde à sauter' },
             { kind: 'rest', seconds: 45 },
           ],
         },
         {
           kind: 'interval', repeat: rounds, name: 'Rounds de sac', steps: [
-            { kind: 'work', seconds: 180, label: `sac — ${style}` },
+            { kind: 'work', seconds: 180, label: `sac, ${style}` },
             { kind: 'rest', seconds: 60 },
           ],
         },
@@ -417,7 +417,7 @@ const CoachEngine = {
       steps: [
         {
           kind: 'work', seconds: 1500, name: 'Cardio léger',
-          label: 'vélo ou marche rapide — tu dois pouvoir tenir une conversation',
+          label: 'vélo ou marche rapide, tu dois pouvoir tenir une conversation',
         },
         {
           kind: 'cooldown', seconds: 600,
@@ -444,9 +444,17 @@ const CoachEngine = {
       return { date, dow: ceDate(date).getDay() || 7, weather: w, outdoor, forced: !!forced };
     });
 
-    // Le jour le plus clément prend la séance de course ; l'autre prend l'intensité/mixte.
-    const scored = days.map(d => (d.weather ? d.weather.best.score : 50) + (d.outdoor ? 15 : 0));
-    const runIdx = scored[0] >= scored[1] ? 0 : 1;
+    // Le jour le plus clément prend la sortie course. Fonctionne quel que soit
+    // le nombre de jours choisis : on classe et on prend le meilleur.
+    const scored = days.map((d, i) => ({
+      i, score: (d.weather ? d.weather.best.score : 50) + (d.outdoor ? 15 : 0),
+    }));
+    const runIdx = scored.slice().sort((a, b) => b.score - a.score)[0].i;
+
+    // Les autres jours alternent intensité et mixte, pour ne pas enchaîner
+    // deux séances de même nature dans la semaine.
+    const prefersBoxe = (ctx.aff.sac || 0) + (ctx.aff.boxe || 0) >= (ctx.aff.rameur || 0);
+    let otherRank = 0;
 
     days.forEach((d, i) => {
       const isRun = i === runIdx;
@@ -455,8 +463,11 @@ const CoachEngine = {
       else if (isRun) {
         s = (ctx.form.state === 'progression' && d.outdoor) ? this.fractionne(ctx, d.outdoor) : this.endurance(ctx, d.outdoor);
       } else {
-        s = d.outdoor && (ctx.aff.course_ext || 0) > 0 && ctx.form.state === 'progression'
-          ? this.boxe(ctx) : ((ctx.aff.sac || 0) + (ctx.aff.boxe || 0) >= (ctx.aff.rameur || 0) ? this.boxe(ctx) : this.mixte(ctx));
+        // Alternance : la 1re séance secondaire suit ton affinité,
+        // la 2e prend l'autre nature, la 3e revient à la première.
+        const wantBoxe = otherRank % 2 === 0 ? prefersBoxe : !prefersBoxe;
+        s = wantBoxe ? this.boxe(ctx) : this.mixte(ctx);
+        otherRank++;
       }
       // La prose affichée est dérivée des étapes, à un seul endroit.
       s.blocks = ceBlocks(s.steps);
@@ -475,14 +486,22 @@ const CoachEngine = {
     let capped = false;
 
     if (proposed > cap) {
-      // On raccourcit la séance secondaire (jamais la sortie course) plutôt que d'alerter.
-      const other = days.find((d, i) => i !== runIdx);
-      if (other) {
-        const room = Math.max(20, other.session.duration - (proposed - cap));
-        if (room < other.session.duration) {
-          other.session.duration = Math.round(room);
-          other.session.trimmed = true;
-          other.why.push(`Volume hebdomadaire ramené à ${cap} min (1,3 × tes ${ctx.form.minPerWeek} min/semaine des 4 dernières semaines) — cette séance est raccourcie, garde les rounds les plus propres.`);
+      // On raccourcit les séances secondaires (jamais la sortie course), en
+      // partant de la plus longue et sans descendre sous 20 min : avec trois
+      // ou quatre jours, rogner une seule séance ne suffirait pas.
+      const others = days
+        .filter((d, i) => i !== runIdx)
+        .sort((a, b) => b.session.duration - a.session.duration);
+
+      for (const d of others) {
+        const excess = proposed - cap;
+        if (excess <= 0) break;
+        const room = Math.max(20, d.session.duration - excess);
+        if (room < d.session.duration) {
+          proposed -= d.session.duration - Math.round(room);
+          d.session.duration = Math.round(room);
+          d.session.trimmed = true;
+          d.why.push(`Volume hebdomadaire ramené à ${cap} min (1,3 × tes ${ctx.form.minPerWeek} min/semaine des 4 dernières semaines) : cette séance est raccourcie, garde les rounds les plus propres.`);
         }
       }
       proposed = days.reduce((t, d) => t + d.session.duration, 0);
@@ -495,17 +514,17 @@ const CoachEngine = {
   why(ctx, day, s, isRun) {
     const out = [];
     const f = ctx.form;
-    if (f.state === 'coupure') out.push(`${f.daysSince} jours sans séance — volume ramené à ${Math.round(Math.min(ctx.run.decay, f.factor) * 100)} % de ta référence.`);
-    else if (f.state === 'reprise') out.push(`${f.daysSince} jours sans séance — on redémarre sous ta référence, pas dessus.`);
-    else if (f.state === 'surcharge') out.push(`Charge des 7 derniers jours à ${Math.round(f.ratio * 100)} % de ta moyenne — on allège.`);
-    else if (f.state === 'progression') out.push(`${f.perWeek} séances/semaine tenues sur 4 semaines — on peut monter de 6 à 10 %.`);
-    else out.push(`Charge stable (${f.acute} pts sur 7 j vs ${f.chronic} pts/sem. en moyenne) — on maintient.`);
+    if (f.state === 'coupure') out.push(`${f.daysSince} jours sans séance : volume ramené à ${Math.round(Math.min(ctx.run.decay, f.factor) * 100)} % de ta référence.`);
+    else if (f.state === 'reprise') out.push(`${f.daysSince} jours sans séance : on redémarre sous ta référence, pas dessus.`);
+    else if (f.state === 'surcharge') out.push(`Charge des 7 derniers jours à ${Math.round(f.ratio * 100)} % de ta moyenne, on allège.`);
+    else if (f.state === 'progression') out.push(`${f.perWeek} séances/semaine tenues sur 4 semaines : on peut monter de 6 à 10 %.`);
+    else out.push(`Charge stable (${f.acute} pts sur 7 j vs ${f.chronic} pts/sem. en moyenne) : on maintient.`);
 
     if (isRun && s.distance) out.push(`Référence course : ${ceKm(ctx.run.ref)} km (2 meilleures sorties des 60 derniers jours) → cible ${ceKm(s.distance)} km.`);
     if (!day.weather) out.push('Météo indisponible — modalité par défaut, à ajuster.');
-    else if (day.forced) out.push(`Modalité forcée à la main (${day.outdoor ? 'extérieur' : 'salle'}) — ${day.weather.why}.`);
+    else if (day.forced) out.push(`Modalité forcée à la main (${day.outdoor ? 'extérieur' : 'salle'}) : ${day.weather.why}.`);
     else if (day.outdoor) out.push(`Extérieur : ${day.weather.why}.`);
-    else if (day.weatherOutdoor) out.push(`Séance d'intérieur par nature — ${day.weather.why}, garde la sortie pour l'autre jour.`);
+    else if (day.weatherOutdoor) out.push(`Séance d'intérieur par nature : ${day.weather.why}, garde la sortie pour l'autre jour.`);
     else out.push(`Repli en salle : ${day.weather.why}.`);
     return out;
   },

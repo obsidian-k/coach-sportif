@@ -7,7 +7,10 @@ Deux corrections :
    types sont tombés dans « autre » (le typeKey Garmin n'était pas mappé).
    On rejoue les règles de nommage de session_types.py.
 
-2. Allures — recalculées depuis distance ÷ durée pour la course à pied,
+2. Doublons — une même sortie importée depuis Strava ET depuis Garmin
+   est comptée deux fois dans les totaux. On garde la version Garmin.
+
+3. Allures — recalculées depuis distance ÷ durée pour la course à pied,
    supprimées ailleurs. La colonne « allure » des exports CSV est peu fiable
    (jusqu'à 2:33/km enregistré pour une sortie réellement à 7:22/km), et sur
    une rando cette métrique n'informe pas : elle trompe.
@@ -71,6 +74,44 @@ def bad_paces(sessions):
     return out
 
 
+# Deux imports de la même sortie (Strava et Garmin) : même jour, même
+# distance. La tolérance absorbe les arrondis des exports.
+DUP_DISTANCE_TOLERANCE_KM = 0.15
+
+# En cas de doublon, on garde la version Garmin : c'est la source primaire
+# (la montre), et elle porte le nom de lieu plutôt qu'un « Sortie VTT ».
+SOURCE_PRIORITY = {"garmin": 0, "strava": 1, "manuel": 2}
+
+
+def duplicates(sessions):
+    """Séances à supprimer : (doublon, séance_conservée)."""
+    by_day = {}
+    for s in sessions:
+        if s.get("distance_km"):
+            by_day.setdefault(s["date"], []).append(s)
+
+    out = []
+    for day, group in by_day.items():
+        group = sorted(group, key=lambda s: SOURCE_PRIORITY.get(s.get("source"), 9))
+        kept = []
+        for s in group:
+            twin = next(
+                (k for k in kept
+                 # Sources différentes obligatoire : c'est le vrai cas de figure
+                 # (la même sortie remontée par Strava et par Garmin). Deux
+                 # séances de même source le même jour peuvent parfaitement
+                 # être deux séances réelles, on ne les touche pas.
+                 if k.get("source") != s.get("source")
+                 and abs(k["distance_km"] - s["distance_km"]) <= DUP_DISTANCE_TOLERANCE_KM),
+                None,
+            )
+            if twin:
+                out.append((s, twin))
+            else:
+                kept.append(s)
+    return out
+
+
 def type_from_title(title: str, duration_min=None):
     """Type déduit du seul titre de l'activité, ou None si aucune règle ne matche."""
     name = (title or "").lower()
@@ -104,8 +145,9 @@ def main():
             changes.append((s, s["type"], proposed))
 
     paces = bad_paces(sessions)
+    dups = duplicates(sessions)
 
-    if not changes and not paces:
+    if not changes and not paces and not dups:
         print("✅ Rien à réparer — l'historique est déjà à jour.")
         return
 
@@ -133,6 +175,14 @@ def main():
             print(f"     {sess['date']}  {sess['title'][:30]:<30} "
                   f"{cur//60}:{cur%60:02d} → {calc//60}:{calc%60:02d}")
 
+    if dups:
+        print(f"\n👯 {len(dups)} doublon(s) : même sortie importée depuis Strava ET Garmin.")
+        print("   On garde la version Garmin (source primaire, nom de lieu correct).")
+        for bad, kept in dups[:8]:
+            print(f"   · {bad['date']}  {bad.get('distance_km')} km  "
+                  f"on retire « {bad['title'][:26]} » ({bad['source']}), "
+                  f"on garde « {kept['title'][:26]} » ({kept['source']})")
+
     if not args.apply:
         print("\nℹ️  Aperçu seul. Relance avec --apply pour écrire.")
         return
@@ -142,10 +192,14 @@ def main():
         sess["type"] = new
     for sess, calc in paces:
         sess["pace_sec_km"] = calc          # None si non recalculable
+    if dups:
+        drop_ids = {id(bad) for bad, _ in dups}
+        sessions = [s for s in sessions if id(s) not in drop_ids]
     with open(SESSIONS, "w", encoding="utf-8") as f:
         json.dump(sessions, f, ensure_ascii=False, indent=2)
 
-    print(f"\n💾 {len(changes)} séance(s) reclassée(s), {len(paces)} allure(s) corrigée(s) → {SESSIONS}")
+    print(f"\n💾 {len(changes)} reclassée(s), {len(paces)} allure(s) corrigée(s), "
+          f"{len(dups)} doublon(s) retiré(s) → {SESSIONS}")
     print(f"   Sauvegarde de l'ancien fichier : {os.path.basename(SESSIONS)}.bak")
     print("\n   Répartition après reclassement :")
     for t, n in Counter(s["type"] for s in sessions).most_common():
