@@ -341,7 +341,7 @@ def fetch_track(api, activity_id: str, target_points=250):
         return None
     try:
         # maxpoly plafonne déjà côté serveur : moins de données à transférer.
-        raw = api.get_activity_details(raw_id, maxchart=0, maxpoly=2000)
+        raw = api.get_activity_details(raw_id, maxchart=2000, maxpoly=2000)
     except Exception as e:
         if "429" in str(e):
             raise
@@ -410,7 +410,7 @@ def enrich(api, sessions, gps_types, strength_types, max_calls=MAX_CALLS_PER_RUN
                     n_str += 1
                 time.sleep(THROTTLE_S)
 
-            elif stype in gps_types and sid not in tracks:
+            elif stype in gps_types and not tracks.get(sid):
                 tr = fetch_track(api, aid)
                 calls += 1
                 tracks[sid] = tr or {}
