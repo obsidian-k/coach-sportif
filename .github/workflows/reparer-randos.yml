@@ -56,5 +56,13 @@ jobs:
             exit 0
           fi
           git commit -m "fix: seances restaurees, randos et traces GPS"
-          git push || (git pull --rebase origin main && git push)
-          echo "Enregistre."
+          # Push robuste contre les runs concurrents. --autostash evite l'erreur
+          # 128 si un fichier annexe reste non-indexe pendant le rebase.
+          for i in 1 2 3 4 5; do
+            if git push; then echo "Push OK"; exit 0; fi
+            echo "Push rejete — rattrapage $i/5…"
+            git pull --rebase --autostash origin main || git rebase --abort || true
+            sleep 5
+          done
+          echo "::error::Echec du push apres 5 tentatives"
+          exit 1
