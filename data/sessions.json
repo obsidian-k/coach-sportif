@@ -1,5 +1,21 @@
 [
   {
+    "id": "g_24037271930",
+    "date": "2026-08-19",
+    "source": "garmin",
+    "type": "rando",
+    "title": "Pryazhinskiy rayon Randonnée",
+    "duration_min": 130.8,
+    "calories": 439,
+    "distance_km": 3.4,
+    "pace_sec_km": null,
+    "hr_avg": 88,
+    "hr_max": 112,
+    "elevation_m": 43,
+    "rounds": null,
+    "notes": ""
+  },
+  {
     "id": "g_23872492689",
     "date": "2026-08-06",
     "source": "garmin",
