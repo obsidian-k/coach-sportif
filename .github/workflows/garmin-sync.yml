@@ -2,19 +2,16 @@ name: Garmin Sync
 
 on:
   schedule:
-    # Minutes non rondes : les créneaux à l'heure pile sont saturés chez
-    # GitHub et souvent retardés de 1-3 h. Deux passages/jour = filet de
-    # sécurité si l'un est retardé ou droppé (les données sont cumulatives).
-    - cron: '23 4 * * *'   # ~06h23 France
-    - cron: '17 11 * * *'  # ~13h17 France (rattrapage)
+    - cron: '23 4 * * *'
+    - cron: '17 11 * * *'
   workflow_dispatch:
     inputs:
       days:
-        description: 'Nombre de jours à récupérer (activités)'
+        description: 'Nombre de jours a recuperer (activites)'
         required: false
         default: '60'
       sleep_days:
-        description: 'Nombre de nuits de sommeil (grande valeur = backfill historique)'
+        description: 'Nombre de nuits de sommeil'
         required: false
         default: '4000'
 
@@ -48,7 +45,17 @@ jobs:
         run: |
           git config user.name "Garmin Bot"
           git config user.email "bot@github.com"
-          git add data/sessions.json data/sleep.json 2>/dev/null || true
-          git diff --staged --quiet || git commit -m "sync: Garmin activities $(date +%Y-%m-%d)"
-          git pull --rebase origin main
-          git push
+          git add -A data/
+          if git diff --staged --quiet; then
+            echo "Aucun changement a enregistrer."
+            exit 0
+          fi
+          git commit -m "sync: Garmin activities $(date +%Y-%m-%d)"
+          for i in 1 2 3 4 5; do
+            if git push; then echo "Push OK"; exit 0; fi
+            echo "Push rejete, tentative $i/5"
+            git pull --rebase --autostash origin main || git rebase --abort || true
+            sleep 5
+          done
+          echo "::error::Echec du push apres 5 tentatives"
+          exit 1
