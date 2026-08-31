@@ -1,5 +1,21 @@
 [
   {
+    "id": "g_24181834760",
+    "date": "2026-08-31",
+    "source": "garmin",
+    "type": "course_ext",
+    "title": "Noyal-sur-Vilaine Course à pied",
+    "duration_min": 39.7,
+    "calories": 467,
+    "distance_km": 5.94,
+    "pace_sec_km": 401,
+    "hr_avg": 160,
+    "hr_max": 173,
+    "elevation_m": 71,
+    "rounds": null,
+    "notes": ""
+  },
+  {
     "id": "g_24037271930",
     "date": "2026-08-19",
     "source": "garmin",
